@@ -20,11 +20,11 @@ class PengServer(Server):
 	@make_method("/muse/elements/experimental/concentration", 'f')
 	def concentration_callback(self, path, args):
 		self.clevel = 1 - sqrt((sum(args) / float(len(args))))
-		print  self.acc
+		print  self.acc * self.clevel
 
 	@make_method("/muse/acc", 'fff')
 	def acc_callback(self, path, args):
-		self.acc = args[1]
+		self.acc = args[0]
 
 try:
 	server = PengServer()
