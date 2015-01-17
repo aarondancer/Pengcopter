@@ -223,12 +223,6 @@ def checkCopterCollisions(copter, ufoGroup, fuelGroup, \
                 state.lastFuelCnt=0
             state.copterFuel=state.copterFuel+1
 
-        # Check helicopter collision with ammo
-        # collgroup=pygame.sprite.spritecollide(copter, ammoGroup, 1)
-        # if len(collgroup) > 0:
-         #   _ammoSound.play()
-         #   state.ammoCnt=0
-
         # Check helicopter collision with mine
         collgroup=pygame.sprite.spritecollide(copter, mineGroup, 1)
         if len(collgroup) > 0:
@@ -286,7 +280,6 @@ def addFuel(tile, fuelGroup, state, topSpace):
             state.fuelCnt=state.fuelCnt+1
             state.lastFuelCnt=0
 
-
 # Adds randomly enemy mines
 def addMine(ufoGroup, mineGroup, state):
 
@@ -302,7 +295,6 @@ def addMine(ufoGroup, mineGroup, state):
                 state.mineCnt=state.mineCnt+1
                 mine=Mine(ufo.rect.left+10, ufo.rect.top+20, mineGroup, state)
                 mineGroup.add(mine)
-
 
 # Adds randomly ufo shots
 def addUfoShot(copter, ufoGroup, ufoShotGroup, state):
@@ -466,7 +458,7 @@ class CaveTile():
         pygame.gfxdraw.box(tile,(0,0,self.tileWidth,self.top_tileHeight), self.color)
 
         # Middle Opening
-        pygame.gfxdraw.box(tile, (0,self.top_tileHeight, self.tileWidth, self.landHeight - self.btm_tileHeight), cavebackground)
+        pygame.gfxdraw.box(tile, (0,max(self.top_tileHeight, 0), self.tileWidth, self.landHeight - self.btm_tileHeight), cavebackground)
 
         # Bottom Tile
         pygame.gfxdraw.box(tile, (0,self.landHeight-self.btm_tileHeight, \
@@ -596,6 +588,7 @@ class Mine(pygame.sprite.Sprite):
     # Init fuel tankeinstance
     def __init__(self, xpos=800, ypos=300, mineGroup=None, gameState=None):
 
+        global _rocketImage
         pygame.sprite.Sprite.__init__(self) #call Sprite initializer
         self.image, self.rect=_mineImage
         self.rect.top=ypos
@@ -609,10 +602,15 @@ class Mine(pygame.sprite.Sprite):
     def update(self):
         global _backgroundWidth
 
+        # Adjust rocket position
+        newpos = self.rect.move((self.xmove, self.ymove))
+        self.rect=newpos
+
         # Remove mine leaving screen
         if self.rect.left<=0:
             self.gameState.mineCnt=self.gameState.mineCnt-1
             self.mineGroup.remove(self)
+
 
 #  Ufo Shot
 class UFOShot(pygame.sprite.Sprite):
@@ -850,7 +848,7 @@ def doEntryLoop(screen,background):
     addText("Highscore: " + str(_highScore), background, 310, 300, \
             THECOLORS['lightgreen'], THECOLORS['black'], 20, True)
     addText("[SPACE] to continue", background, 310, 560, \
-            THECOLORS['black'], THECOLORS['skyblue1'], 20, True)
+            THECOLORS['black'], THECOLORS['skyblue'], 20, True)
 
     background.blit(_titleImage[0], (130,50))
     screen.blit(background, (0,0))
