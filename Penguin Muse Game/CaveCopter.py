@@ -67,17 +67,17 @@ def loadImages():
     global _mineImage
     global _titleImage
     global _bgImage
-
-<<<<<<< HEAD
-    _copterImage=loadImage('res\\penguin.png', (255,255,255))
-    _ufoImage=loadImage('res\\orca.png', (0,0,0))
-    _ufoKillImage=loadImage('res\\enemyUFOKill.png', (0,0,0))
-    _ufoShotImage=loadImage('res\\ufoShot.png', (0,0,0))
-    _fuelImage=loadImage('res\\nemo.png', (0,0,0))
-    _mineImage=loadImage('res\\emoji_poop.png', (0,0,0))
-    _titleImage=loadImage('res\\penguinlg.png',  (255,255,255))
-    _bgImage = loadImage('res\\bg.jpg', (0,0,0))
-=======
+#
+# <<<<<<< HEAD
+#     _copterImage=loadImage('res\\penguin.png', (255,255,255))
+#     _ufoImage=loadImage('res\\orca.png', (0,0,0))
+#     _ufoKillImage=loadImage('res\\enemyUFOKill.png', (0,0,0))
+#     _ufoShotImage=loadImage('res\\ufoShot.png', (0,0,0))
+#     _fuelImage=loadImage('res\\nemo.png', (0,0,0))
+#     _mineImage=loadImage('res\\emoji_poop.png', (0,0,0))
+#     _titleImage=loadImage('res\\penguinlg.png',  (255,255,255))
+#     _bgImage = loadImage('res\\bg.jpg', (0,0,0))
+# =======
     _copterImage=loadImage('res/penguin.png', (255,255,255))
     _ufoImage=loadImage('res/orca.png', (0,0,0))
     _ufoKillImage=loadImage('res/enemyUFOKill.png', (0,0,0))
@@ -88,7 +88,7 @@ def loadImages():
     _mineImage=loadImage('res/emoji_poop.png', (0,0,0))
     _titleImage=loadImage('res/penguinlg.png',  (255,255,255))
     _bgImage = loadImage('res/bg.jpg', (0,0,0))
->>>>>>> db8905276cb1afa1b743ac2f9c77803c5f4260ed
+# >>>>>>> db8905276cb1afa1b743ac2f9c77803c5f4260ed
 
 # load sound
 def loadSound(name):
@@ -383,10 +383,6 @@ def updateCopterInfo(background, state):
     addText("Health: " + str(state.copterFuel), background, 15, 3, THECOLORS['lightgrey'], (0,0,0), 20)
     addText("Sector: " + str(state.sector), background, 210, 3, THECOLORS[state.sectorColor], (0,0,0), 20)
     addText("Score: " + str(state.copterScore), background, 440, 3, THECOLORS['cyan'], (0,0,0), 20)
-<<<<<<< HEAD
-=======
-    #addText("Rockets: " + str(state.copterRockets), background, 680, 3, THECOLORS['lightgreen'], (0,0,0), 20)
->>>>>>> db8905276cb1afa1b743ac2f9c77803c5f4260ed
 
 # Explodes sprite into several fragments returned in a sprite group
 def explodeSprite(toExplode=None, xtiles=0, ytiles=0):
@@ -935,19 +931,13 @@ def doMainLoop(screen,background, tile):
                     copter.ymove=-copter.ydelta
                 if event.key == 274: # down
                     copter.ymove=copter.ydelta
-<<<<<<< HEAD
-                #if event.key == 275: # right
-                #    copter.xmove=copter.xdelta
-                #if event.key == 276: # left
-                #    copter.xmove=-copter.xdelta
-=======
+
                 if event.key == 275: # right
                     copter.xmove=copter.xdelta
                 if event.key == 276: # left
                     copter.xmove=-copter.xdelta
                 #if event.key == 32: # space
                     #fireRocket(rocketGroup, copter, state)
->>>>>>> db8905276cb1afa1b743ac2f9c77803c5f4260ed
                 if event.key == K_ESCAPE: # esc
                     quit();
             elif event.type == KEYUP:
