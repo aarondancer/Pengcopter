@@ -1,22 +1,38 @@
 #!/usr/bin/env python
 
-import liblo, sys
+from liblo import *
+from math import sqrt
+import sys, time
+
+class PengServer(Server):
+
+	def __init__(self):
+		Server.__init__(self, 5001)
+
+	global acc
+	global clevel
+	clevel = 0.0
+	acc = 0.0
+
+	def printAcc(self):
+		print self.acc
+
+	@make_method("/muse/elements/experimental/concentration", 'f')
+	def concentration_callback(self, path, args):
+		self.clevel = 1 - sqrt((sum(args) / float(len(args))))
+		print  self.acc
+
+	@make_method("/muse/acc", 'fff')
+	def acc_callback(self, path, args):
+		self.acc = args[1]
 
 try:
-    server = liblo.Server(5001)
-except liblo.ServerError, err:
-    print str(err)
-    sys.exit()
-
-def concentration_callback(path, args):
-    print (sum(args) / float(len(args)))
-
-def acc_callback(path, args):
-	print (sum(args) / float(len(args)))
-
-server.add_method("/muse/elements/experimental/concentration", 'f', concentration_callback)
-server.add_method("/muse/acc", 'fff', acc_callback)
+	server = PengServer()
+except ServerError, err:
+	print str(err)
+	sys.exit()
 
 # loop and dispatch messages every 100ms
 while True:
-    server.recv(1000)
+	server.recv(100)
+	# time.sleep(0.01)
