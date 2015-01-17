@@ -716,8 +716,8 @@ class Copter(pygame.sprite.Sprite):
         pygame.sprite.Sprite.__init__(self) #call Sprite initializer
         self.image, self.rect=_copterImage
         self.imageNormal=self.image
-        self.image=pygame.transform.rotate(self.image, 10)
-        self.imageForward=pygame.transform.rotate(self.image, -10)
+        self.image=pygame.transform.rotate(self.image, -20)
+        # self.imageForward=pygame.transform.rotate(self.image, -10)
         self.rect.top=ypos
         self.rect.left=xpos
         self.xmove=0
@@ -735,14 +735,6 @@ class Copter(pygame.sprite.Sprite):
         # Drop copter if no fuel left
         if self.state.copterFuel<=0:
             self.ymove=2
-
-        # Set helicopter angle
-        if self.xmove < 0:
-            self.image=self.imageBackward
-        elif self.xmove > 0:
-            self.image=self.imageForward
-        else:
-            self.image=self.imageNormal
 
         # Adjust helicopter position
         newpos = self.rect.move((self.xmove, self.ymove))
@@ -858,7 +850,7 @@ def doEntryLoop(screen,background):
     addText("Highscore: " + str(_highScore), background, 310, 300, \
             THECOLORS['lightgreen'], THECOLORS['black'], 20, True)
     addText("[SPACE] to continue", background, 310, 560, \
-            THECOLORS['black'], THECOLORS['lightblue'], 20, True)
+            THECOLORS['black'], THECOLORS['skyblue1'], 20, True)
 
     background.blit(_titleImage[0], (130,50))
     screen.blit(background, (0,0))
@@ -931,13 +923,6 @@ def doMainLoop(screen,background, tile):
                     copter.ymove=-copter.ydelta
                 if event.key == 274: # down
                     copter.ymove=copter.ydelta
-
-                if event.key == 275: # right
-                    copter.xmove=copter.xdelta
-                if event.key == 276: # left
-                    copter.xmove=-copter.xdelta
-                #if event.key == 32: # space
-                    #fireRocket(rocketGroup, copter, state)
                 if event.key == K_ESCAPE: # esc
                     quit();
             elif event.type == KEYUP:
