@@ -76,16 +76,16 @@ def loadImages():
     global _titleImage
     global _bgImage
 
-    _copterImage=loadImage('res\\penguin.png', (255,255,255))
-    _ufoImage=loadImage('res\\orca.png', (0,0,0))
-    _ufoKillImage=loadImage('res\\enemyUFOKill.png', (0,0,0))
-    _ufoShotImage=loadImage('res\\ufoShot.png', (0,0,0))
-    _fuelImage=loadImage('res\\nemo.png', (0,0,0))
-    _rocketImage=loadImage('res\\rocket.png', (0,0,0))
-    _ammoImage=loadImage('res\\ammo.png', (0,0,0))
-    _mineImage=loadImage('res\\emoji_poop.png', (0,0,0))
-    _titleImage=loadImage('res\\penguinlg.png',  (255,255,255))
-    _bgImage = loadImage('res\\bg.jpg', (0,0,0))
+    _copterImage=loadImage('res/penguin.png', (255,255,255))
+    _ufoImage=loadImage('res/orca.png', (0,0,0))
+    _ufoKillImage=loadImage('res/enemyUFOKill.png', (0,0,0))
+    _ufoShotImage=loadImage('res/ufoShot.png', (0,0,0))
+    _fuelImage=loadImage('res/nemo.png', (0,0,0))
+    _rocketImage=loadImage('res//rocket.png', (0,0,0))
+    _ammoImage=loadImage('res/ammo.png', (0,0,0))
+    _mineImage=loadImage('res/emoji_poop.png', (0,0,0))
+    _titleImage=loadImage('res/penguinlg.png',  (255,255,255))
+    _bgImage = loadImage('res/bg.jpg', (0,0,0))
 
 # load sound
 def loadSound(name):
