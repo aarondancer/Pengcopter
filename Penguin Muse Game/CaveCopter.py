@@ -444,10 +444,10 @@ def addText(text, background, xpos, ypos, \
 # Update game information on top of the screen
 def updateCopterInfo(background, state):
 
-    addText("Fuel: " + str(state.copterFuel), background, 15, 3, THECOLORS['lightgrey'], (0,0,0), 20)
+    addText("Energy: " + str(state.copterFuel), background, 15, 3, THECOLORS['lightgrey'], (0,0,0), 20)
     addText("Sector: " + str(state.sector), background, 210, 3, THECOLORS[state.sectorColor], (0,0,0), 20)
     addText("Score: " + str(state.copterScore), background, 440, 3, THECOLORS['cyan'], (0,0,0), 20)
-    addText("Rockets: " + str(state.copterRockets), background, 680, 3, THECOLORS['lightgreen'], (0,0,0), 20)
+    #addText("Rockets: " + str(state.copterRockets), background, 680, 3, THECOLORS['lightgreen'], (0,0,0), 20)
 
 # Explodes sprite into several fragments returned in a sprite group
 def explodeSprite(toExplode=None, xtiles=0, ytiles=0):
@@ -1068,7 +1068,7 @@ def doMainLoop(screen,background, tile):
                     copter.xmove=copter.xdelta
                 if event.key == 276: # left
                     copter.xmove=-copter.xdelta
-                if event.key == 32: # space
+                #if event.key == 32: # space
                     fireRocket(rocketGroup, copter, state)
                 if event.key == K_ESCAPE: # esc
                     quit();
