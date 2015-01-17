@@ -7,20 +7,12 @@ import pygame.mixer
 from pygame.locals import *
 from pygame.color import *
 
-#######################################################
-### Cave Copter - by Heiko Nolte, February 2010
-### To execute install Python 2.x and PyGame API
-### This is freeware.
-#######################################################
-
 # images
 _copterImage=None
 _ufoImage=None
 _ufoKillImage=None
 _ufoShotImage=None
 _fuelImage=None
-_ammoImage=None
-_rocketImage=None
 _mineImage=None
 _titleImage=None
 
@@ -31,7 +23,6 @@ _enemySound=None
 _enemyKillSound=None
 _fuelSound=None
 _fuelDownSound=None
-_ammoSound=None
 _mineSound=None
 _copterKillSound=None
 
@@ -41,6 +32,9 @@ _backgroundHeight=600
 
 # High score
 _highScore=0
+
+# Cave BackgroundColor
+cavebackground = (52, 73,94)
 
 ##############################################################
 ### Utility functions
@@ -54,7 +48,7 @@ def loadImage(name, colorkey=None):
         image = pygame.image.load(fullname)
     except pygame.error, message:
         print 'Cannot load image:', fullname
-        raise SystemExit, message
+        raise SystemExit(message)
     image = image.convert()
     if colorkey is not None:
         if colorkey is -1:
@@ -70,20 +64,16 @@ def loadImages():
     global _ufoKillImage
     global _ufoShotImage
     global _fuelImage
-    global _rocketImage
-    global _ammoImage
     global _mineImage
     global _titleImage
     global _bgImage
 
     _copterImage=loadImage('res\\penguin.png', (255,255,255))
-    _ufoImage=loadImage('res\\enemyUFO.png', (0,0,0))
+    _ufoImage=loadImage('res\\orca.png', (0,0,0))
     _ufoKillImage=loadImage('res\\enemyUFOKill.png', (0,0,0))
     _ufoShotImage=loadImage('res\\ufoShot.png', (0,0,0))
-    _fuelImage=loadImage('res\\fuelTank.png', (0,0,0))
-    _rocketImage=loadImage('res\\rocket.png', (0,0,0))
-    _ammoImage=loadImage('res\\ammo.png', (0,0,0))
-    _mineImage=loadImage('res\\enemyMine.png', (0,0,0))
+    _fuelImage=loadImage('res\\nemo.png', (0,0,0))
+    _mineImage=loadImage('res\\emoji_poop.png', (0,0,0))
     _titleImage=loadImage('res\\penguinlg.png',  (255,255,255))
     _bgImage = loadImage('res\\bg.jpg', (0,0,0))
 
@@ -111,7 +101,6 @@ def loadSounds():
     global _enemyKillSound
     global _fuelSound
     global _fuelDownSound
-    global _ammoSound
     global _mineSound
     global _copterKillSound
 
@@ -121,7 +110,6 @@ def loadSounds():
     _enemyKillSound=loadSound('res\\enemyKill.wav')
     _fuelSound=loadSound('res\\fuel.wav')
     _fuelDownSound=loadSound('res\\fuelDown.wav')
-    _ammoSound=loadSound('res\\ammo.wav')
     _mineSound=loadSound('res\\mine.wav')
     _copterKillSound=loadSound('res\\copterKill.wav')
 
@@ -129,7 +117,6 @@ def loadSounds():
     _heliSound.set_volume(0.5)
     _fuelDownSound.set_volume(0.2)
     _fuelSound.set_volume(0.05)
-    _ammoSound.set_volume(0.5)
     _mineSound.set_volume(0.1)
     _copterKillSound.set_volume(0.5)
 
@@ -189,18 +176,7 @@ def checkBackgroundCollision(background, toCheck, toCheckGroup):
         return result
 
 # Checks UFO collisions with other objects
-def checkUfoCollisions(ufoGroup, rocketGroup, killedGroup, state, background):
-
-    # Check rocket collision with UFO
-    collgroup=pygame.sprite.groupcollide(rocketGroup, ufoGroup, 1, 1)
-    for collrocket in collgroup.keys():
-        _enemyKillSound.play()
-        collufo=collgroup[collrocket][0]
-        collufo.image=_ufoKillImage[0]
-        killedGroup.add(collufo)
-        state.rocketCnt=state.rocketCnt-1
-        state.copterScore=state.copterScore+100
-        state.ufoCnt=state.ufoCnt-1
+def checkUfoCollisions(ufoGroup, killedGroup, state, background):
 
     # Avoid ufo collisions with cave
     ufos=ufoGroup.sprites()
@@ -213,7 +189,7 @@ def checkUfoCollisions(ufoGroup, rocketGroup, killedGroup, state, background):
     handleKilledEnemies(killedGroup)
 
 # Checks copter collisions with other objects
-def checkCopterCollisions(copter, ufoGroup, fuelGroup, ammoGroup, \
+def checkCopterCollisions(copter, ufoGroup, fuelGroup, \
                           mineGroup, ufoShotGroup, state):
             # Check helicopter collision with UFO
         collgroup=pygame.sprite.spritecollide(copter, ufoGroup, 0, pygame.sprite.collide_mask)
@@ -230,16 +206,15 @@ def checkCopterCollisions(copter, ufoGroup, fuelGroup, ammoGroup, \
             collgroup[0].fuel=collgroup[0].fuel-1
             if collgroup[0].fuel<=0:
                 fuelGroup.remove(collgroup[0])
-                state.fuelCnt=state.fuelCnt-1
+                state.fuelCnt=0
                 state.lastFuelCnt=0
             state.copterFuel=state.copterFuel+1
 
         # Check helicopter collision with ammo
-        collgroup=pygame.sprite.spritecollide(copter, ammoGroup, 1)
-        if len(collgroup) > 0:
-            _ammoSound.play()
-            state.copterRockets=state.copterRockets+3
-            state.ammoCnt=0
+        # collgroup=pygame.sprite.spritecollide(copter, ammoGroup, 1)
+        # if len(collgroup) > 0:
+         #   _ammoSound.play()
+         #   state.ammoCnt=0
 
         # Check helicopter collision with mine
         collgroup=pygame.sprite.spritecollide(copter, mineGroup, 1)
@@ -254,23 +229,6 @@ def checkCopterCollisions(copter, ufoGroup, fuelGroup, ammoGroup, \
             _fuelDownSound.play()
             state.ufoShotCnt=state.ufoShotCnt-1
             state.copterFuel=state.copterFuel-50
-
-# Checks rocket collisions with background
-def checkRocketCollisions(rocketGroup, mineGroup, state, background):
-
-        # Check rocket collisions with cave
-        rockets=rocketGroup.sprites()
-        for ndx in range(len(rockets)):
-            rocket=rockets[ndx]
-            checkBackgroundCollision(background,rocket,rocketGroup)
-
-        # Check rocket collision with mine
-        collgroup=pygame.sprite.groupcollide(rocketGroup, mineGroup, 1, 1)
-        for collrocket in collgroup.keys():
-            _enemyKillSound.play()
-            state.rocketCnt=state.rocketCnt-1
-            state.copterScore=state.copterScore+25
-            state.mineCnt=state.mineCnt-1
 
 # Checks ufo shot collisions with background
 def checkUfoShotCollisions(ufoShotGroup, state, background):
@@ -315,25 +273,6 @@ def addFuel(tile, fuelGroup, state, topSpace):
             state.fuelCnt=state.fuelCnt+1
             state.lastFuelCnt=0
 
-# Adds randomly ammo
-def addAmmo(tile, ammoGroup, state, topSpace):
-
-    global _backgroundWidth
-    global _backgroundHeight
-
-    state.lastAmmoCnt=state.lastAmmoCnt+1
-    doAdd=random.randint(1,100)
-    if state.ammoCnt<state.ammoMax and state.lastAmmoCnt>state.doAmmoCnt:
-        if doAdd==1:
-            x=random.randint(1, 2)
-            if x==1:
-                position=tile.top_tileHeight+topSpace+random.randint(20, 40)
-            else:
-                position=_backgroundHeight-tile.btm_tileHeight-random.randint(30, 50)
-            ammo=Ammo(_backgroundWidth-50, position, ammoGroup, state)
-            ammoGroup.add(ammo)
-            state.ammoCnt=state.ammoCnt+1
-            state.lastAmmoCnt=0
 
 # Adds randomly enemy mines
 def addMine(ufoGroup, mineGroup, state):
@@ -409,22 +348,6 @@ def addUfo(tile, ufoGroup, state, topSpace):
             state.ufoCnt=state.ufoCnt+1
             state.lastUfoCnt=0
 
-# Helicopter fires a rocket
-def fireRocket(rocketGroup, copter, state):
-
-    global _missleSound
-    global _heliSound
-
-    # Maximum number of rockets not reached and rockets in stock
-    if state.rocketCnt<state.rocketMax and state.copterRockets>0:
-        _missleSound.play()
-        xpos=copter.rect.left+copter.rect.width-20
-        ypos=copter.rect.top+copter.rect.height/2
-        rocket=Rocket(xpos, ypos, rocketGroup, state)
-        rocketGroup.add(rocket)
-        state.rocketCnt=state.rocketCnt+1
-        state.copterRockets=state.copterRockets-1
-
 # Add text to provided background
 def addText(text, background, xpos, ypos, \
             color=(255,255,255), bgcolor=(0,0,0), size=22, center=False):
@@ -447,7 +370,6 @@ def updateCopterInfo(background, state):
     addText("Fuel: " + str(state.copterFuel), background, 15, 3, THECOLORS['lightgrey'], (0,0,0), 20)
     addText("Sector: " + str(state.sector), background, 210, 3, THECOLORS[state.sectorColor], (0,0,0), 20)
     addText("Score: " + str(state.copterScore), background, 440, 3, THECOLORS['cyan'], (0,0,0), 20)
-    addText("Rockets: " + str(state.copterRockets), background, 680, 3, THECOLORS['lightgreen'], (0,0,0), 20)
 
 # Explodes sprite into several fragments returned in a sprite group
 def explodeSprite(toExplode=None, xtiles=0, ytiles=0):
@@ -493,6 +415,7 @@ def explodeSprite(toExplode=None, xtiles=0, ytiles=0):
 #############################################################
 
 # Vertical tile of cave
+# The parts on the top and bottom of the screen
 class CaveTile():
 
     # Create a cave tile
@@ -522,10 +445,19 @@ class CaveTile():
 
     # Fetch a cave tile and set generate next one randomly
     def fetchTile(self):
+
+        # Tile
         tile = pygame.Surface((self.tileWidth, self.landHeight))
+
+        # Top tile
+        pygame.gfxdraw.box(tile,(0,0,self.tileWidth,self.top_tileHeight), self.color)
+
+        # Middle Opening
+        pygame.gfxdraw.box(tile, (0,self.top_tileHeight, self.tileWidth, self.landHeight - self.btm_tileHeight), cavebackground)
+
+        # Bottom Tile
         pygame.gfxdraw.box(tile, (0,self.landHeight-self.btm_tileHeight, \
                            self.tileWidth,self.landHeight), self.color)
-        pygame.gfxdraw.box(tile,(0,0,self.tileWidth,self.top_tileHeight), self.color)
 
         # Adjust top tile height
         vec=random.randint(1, 10)
@@ -587,7 +519,7 @@ class BgTile(pygame.sprite.Sprite):
 
         pygame.sprite.Sprite.__init__(self)
         self.image=background.subsurface(tiledim)
-        self.image.set_colorkey((0,0,0))
+        self.image.set_colorkey(cavebackground)
         self.rect=tiledim
 
 # Sprite to detect background collision
@@ -629,7 +561,7 @@ class FuelTank(pygame.sprite.Sprite):
         self.ymove=0
         self.fuelGroup=fuelGroup
         self.gameState=gameState
-        self.fuel=250
+        self.fuel=1
 
     # Update fuel tank settings
     def update(self):
@@ -643,68 +575,7 @@ class FuelTank(pygame.sprite.Sprite):
             self.gameState.fuelCnt=self.gameState.fuelCnt-1
             self.fuelGroup.remove(self)
 
-# Ammo
-class Ammo(pygame.sprite.Sprite):
 
-    # Init fuel tankeinstance
-    def __init__(self, xpos=800, ypos=300, ammoGroup=None, gameState=None):
-
-        global _ammoImage
-        pygame.sprite.Sprite.__init__(self) #call Sprite initializer
-        self.image, self.rect=_ammoImage
-        self.rect.top=ypos
-        self.rect.left=xpos
-        self.xmove=-1
-        self.ymove=0
-        self.ammoGroup=ammoGroup
-        self.gameState=gameState
-
-    # Update fuel tank settings
-    def update(self):
-
-        # Adjust ammo position
-        newpos = self.rect.move((self.xmove, self.ymove))
-        self.rect=newpos
-
-        # Remove fuel tank leaving screen
-        if self.rect.left==-30:
-            self.gameState.ammoCnt=self.gameState.ammoCnt-1
-            self.ammoGroup.remove(self)
-
-# Rocket
-class Rocket(pygame.sprite.Sprite):
-
-    # Init fuel tankeinstance
-    def __init__(self, xpos=800, ypos=300, rocketGroup=None, gameState=None):
-
-        global _rocketImage
-        pygame.sprite.Sprite.__init__(self) #call Sprite initializer
-        self.image, self.rect=_rocketImage
-        self.rect.top=ypos
-        self.rect.left=xpos
-        self.xmove=5
-        self.ymove=0
-        self.rocketGroup=rocketGroup
-        self.gameState=gameState
-
-    # Update fuel tank settings
-    def update(self):
-        global _backgroundWidth
-
-        # Adjust rocket position
-        newpos = self.rect.move((self.xmove, self.ymove))
-        self.rect=newpos
-
-        # Remove rocket leaving screen
-        if self.rect.left>=_backgroundWidth-self.rect.width:
-            self.gameState.rocketCnt=self.gameState.rocketCnt-1
-            self.rocketGroup.remove(self)
-
-    # Rocket has collided with background
-    def collidedBackground(self):
-
-        self.gameState.rocketCnt=self.gameState.rocketCnt-1
-        self.rocketGroup.remove(self)
 
 # Mines are dropped by Ufos
 class Mine(pygame.sprite.Sprite):
@@ -712,7 +583,6 @@ class Mine(pygame.sprite.Sprite):
     # Init fuel tankeinstance
     def __init__(self, xpos=800, ypos=300, mineGroup=None, gameState=None):
 
-        global _rocketImage
         pygame.sprite.Sprite.__init__(self) #call Sprite initializer
         self.image, self.rect=_mineImage
         self.rect.top=ypos
@@ -726,10 +596,6 @@ class Mine(pygame.sprite.Sprite):
     def update(self):
         global _backgroundWidth
 
-        # Adjust rocket position
-        newpos = self.rect.move((self.xmove, self.ymove))
-        self.rect=newpos
-
         # Remove mine leaving screen
         if self.rect.left<=0:
             self.gameState.mineCnt=self.gameState.mineCnt-1
@@ -742,7 +608,6 @@ class UFOShot(pygame.sprite.Sprite):
     def __init__(self, xpos=-1, ypos=-1, xmove=0, ymove=0, \
                  ufoShotGroup=None, gameState=None):
 
-        global _rocketImage
         pygame.sprite.Sprite.__init__(self) #call Sprite initializer
         self.image, self.rect=_ufoShotImage
         self.rect.top=ypos
@@ -838,7 +703,7 @@ class Copter(pygame.sprite.Sprite):
         pygame.sprite.Sprite.__init__(self) #call Sprite initializer
         self.image, self.rect=_copterImage
         self.imageNormal=self.image
-        self.imageBackward=pygame.transform.rotate(self.image, 10)
+        self.image=pygame.transform.rotate(self.image, 10)
         self.imageForward=pygame.transform.rotate(self.image, -10)
         self.rect.top=ypos
         self.rect.left=xpos
@@ -910,27 +775,18 @@ class StateData():
         # Fuel create parameter
         self.fuelMax=1
         self.fuelCnt=0
-        self.lastFuelCnt=0
-        self.doFuelCnt=1200
+        self.lastFuelCnt=-600
+        self.doFuelCnt=500
 
-        # Ammo create parameter
-        self.ammoMax=1
-        self.ammoCnt=0
-        self.lastAmmoCnt=-600
-        self.doAmmoCnt=500
 
         # Copter state
-        self.copterFuel=500
-        self.copterRockets=3
+        self.copterFuel=5000
         self.copterScore=0
 
-        # Rocket create parameter
-        self.rocketMax=3
-        self.rocketCnt=0
 
         # Level parameter
-        self.sectorColors=['skyblue', 'darkgoldenrod4', 'lightblue', 'turquoise3',
-                          'orchid2', 'violetred', 'cornsilk2', 'honeydew3']
+        self.sectorColors=['skyblue', 'skyblue', 'lightblue', 'lightblue',
+                          'skyblue', 'skyblue', 'lightblue', 'lightblue']
         self.sectorColorCnt=0
         self.sectorColor=self.sectorColors[self.sectorColorCnt]
         self.sector=1
@@ -1034,7 +890,7 @@ def doMainLoop(screen,background, tile):
     state=StateData()
 
     # Create helicopter
-    copter=Copter(50, 280, state)
+    copter=Copter(275, 280, state)
 
     # Create sprite groups
     copterGroup = pygame.sprite.RenderPlain((copter))
@@ -1042,8 +898,6 @@ def doMainLoop(screen,background, tile):
     ufoShotGroup = pygame.sprite.RenderPlain()
     killedGroup = pygame.sprite.RenderPlain()
     fuelGroup = pygame.sprite.RenderPlain()
-    rocketGroup = pygame.sprite.RenderPlain()
-    ammoGroup = pygame.sprite.RenderPlain()
     mineGroup = pygame.sprite.RenderPlain()
 
     # Main Loop
@@ -1054,7 +908,7 @@ def doMainLoop(screen,background, tile):
     fuelReductionCnt=0
     while doContinue:
         clock.tick(100) # fps
-
+        
         # Catch input event
         for event in pygame.event.get():
             if event.type == QUIT:
@@ -1064,17 +918,17 @@ def doMainLoop(screen,background, tile):
                     copter.ymove=-copter.ydelta
                 if event.key == 274: # down
                     copter.ymove=copter.ydelta
-                if event.key == 275: # right
-                    copter.xmove=copter.xdelta
-                if event.key == 276: # left
-                    copter.xmove=-copter.xdelta
-                if event.key == 32: # space
-                    fireRocket(rocketGroup, copter, state)
+                #if event.key == 275: # right
+                #    copter.xmove=copter.xdelta
+                #if event.key == 276: # left
+                #    copter.xmove=-copter.xdelta
                 if event.key == K_ESCAPE: # esc
                     quit();
             elif event.type == KEYUP:
                 copter.xmove=0
                 copter.ymove=0
+                
+                
 
         # Scroll landsape
         tile.color=THECOLORS[state.sectorColor]
@@ -1087,25 +941,17 @@ def doMainLoop(screen,background, tile):
         addUfoShot(copter, ufoGroup, ufoShotGroup, state)
         addMine(ufoGroup, mineGroup, state)
         addFuel(tile, fuelGroup, state, topSpace)
-        addAmmo(tile, ammoGroup, state, topSpace)
 
         # Check object collisions
-        checkUfoCollisions(ufoGroup, rocketGroup, killedGroup, state, background)
+        checkUfoCollisions(ufoGroup, killedGroup, state, background)
         doContinue=checkBackgroundCollision(background, copter, copterGroup)
-        checkCopterCollisions(copter, ufoGroup, fuelGroup, ammoGroup, \
+        checkCopterCollisions(copter, ufoGroup, fuelGroup, \
                               mineGroup, ufoShotGroup, state)
-        checkRocketCollisions(rocketGroup, mineGroup, state, background)
         checkUfoShotCollisions(ufoShotGroup, state, background)
-
-        # Check rocket collisions with cave
-        rockets=rocketGroup.sprites()
-        for ndx in range(len(rockets)):
-            rocket=rockets[ndx]
-            checkBackgroundCollision(background,rocket,rocketGroup)
 
         # Update game state data
         if state.copterFuel<0:
-            state.copterFuel=0
+            state.copter=0
         updateCopterInfo(background, state)
 
         # Reduce copter fuel
@@ -1113,7 +959,8 @@ def doMainLoop(screen,background, tile):
             state.copterFuel=state.copterFuel-1
             fuelReductionCnt=0
             state.copterScore=state.copterScore+1
-        fuelReductionCnt=fuelReductionCnt+1
+
+        
 
         # Update sprites
         copterGroup.update()
@@ -1122,15 +969,11 @@ def doMainLoop(screen,background, tile):
         ufoShotGroup.update()
         killedGroup.update()
         fuelGroup.update()
-        ammoGroup.update()
-        rocketGroup.update()
 
         # Update screen
         screen.blit(background, (0,0))
         fuelGroup.draw(screen)
         copterGroup.draw(screen)
-        rocketGroup.draw(screen)
-        ammoGroup.draw(screen)
         mineGroup.draw(screen)
         ufoShotGroup.draw(screen)
         ufoGroup.draw(screen)
@@ -1159,8 +1002,6 @@ def doMainLoop(screen,background, tile):
         screen.blit(background, (0,0))
         fuelGroup.draw(screen)
         explodeGroup.draw(screen)
-        rocketGroup.draw(screen)
-        ammoGroup.draw(screen)
         mineGroup.draw(screen)
         ufoGroup.draw(screen)
         killedGroup.draw(screen)
@@ -1175,7 +1016,7 @@ def doMainLoop(screen,background, tile):
                 THECOLORS['lightgreen'], (0,0,0), 30, True)
     # Show GAME OVER
     addText("GAME OVER", background, 270, 270, \
-            THECOLORS['lightgreen'], (0,0,0), 50, True)
+            THECOLORS['lightgreen'], cavebackground, 50, True)
     addText("[SPACE] to continue", background, 310, 560, \
             (0,0,0), THECOLORS[state.sectorColor], 20, True)
     screen.fill ((52, 73, 94))
