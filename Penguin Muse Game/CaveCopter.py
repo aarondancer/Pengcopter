@@ -13,13 +13,11 @@ _backgroundHeight=600
 
 pygame.init()
 global screen
-screen = pygame.display.set_mode((_backgroundWidth, _backgroundHeight))#, pygame.FULLSCREEN)
+screen = pygame.display.set_mode((_backgroundWidth, _backgroundHeight), pygame.FULLSCREEN)
 pygame.display.set_caption('Penguin Muse')
 pygame.mouse.set_visible(1)
 
-# High score
-_highScore=0
-
+global time1
 time1 = time.clock()
 
 # Cave BackgroundColor
@@ -68,9 +66,6 @@ _orcaImage=loadImage('res/orca.png')
 _poopImage=loadImage('res/emoji_poop.png')
 _sealImage=loadImage('res/seal.png')
 _healthImage=loadImage('res/nemo.png')
-
-# High score
-_highScore=0
 
 # Cave BackgroundColor
 cavebackground = (52, 73,94)
@@ -128,6 +123,12 @@ class StateData():
         self.sector=1
         self.sectorCnt=0
         self.nextSectorCnt=2500
+
+    def resetHealthAndScore(self):
+        global time1
+        time1 = time.clock()
+        self.penguinHealth = 1000
+        self.penguinScore = 0
 
         # Adjusts state data to next sector
     def nextSector(self, tile):
@@ -203,7 +204,6 @@ class Penguin(pygame.sprite.Sprite):
 
     # Helipenguin has collided with background
     def collidedBackground(self):
-
         self.kill()
         print ">>>> collided"
 
@@ -226,7 +226,12 @@ class PengServer(ServerThread):
     @make_method("/muse/elements/experimental/concentration", 'f')
     def concentration_callback(self, path, args):
         self.clevel = 1 - sqrt((sum(args) / float(len(args))))
-        penguin.ymove += (self.acc * self.clevel)/112
+        mvar = (self.acc * self.clevel)/112
+        if (mvar > 0.5):
+            mvar = 0.5
+        if (mvar < -0.5):
+            mvar = -0.5
+        penguin.ymove += mvar
 
     @make_method("/muse/acc", 'fff')
     def acc_callback(self, path, args):
@@ -861,7 +866,6 @@ def doEntryLoop(screen,background):
 
     global _backgroundWidth
     global _titleImage
-    global _highScore
 
     # Draw static background
     tile=CaveTile()
@@ -869,8 +873,6 @@ def doEntryLoop(screen,background):
     for x in range(_backgroundWidth):
         cave=tile.fetchTile()
         background.blit(cave, (x,tile.topSpace))
-    addText("Highscore: " + str(_highScore), background, 310, 20, \
-            THECOLORS['white'], THECOLORS['black'], 20, True)
     addText("[SPACE] to continue", background, 310, 555, \
             THECOLORS['black'], THECOLORS['lightblue'], 20, True)
     addText("Pennjamin's Travels", background, 310, 405, \
@@ -881,6 +883,8 @@ def doEntryLoop(screen,background):
     background.blit(picture, (255,80))
     screen.blit(background, (0,0))
     pygame.display.flip()
+
+    state.resetHealthAndScore()
 
     doLoop=True
     clock=pygame.time.Clock()
@@ -1008,7 +1012,7 @@ def doMainLoop(screen, background, tile):
 
     cnt=0
 
-    while cnt<100:
+    while cnt<25:
 
         clock.tick(100) # fps
         cnt=cnt+1
@@ -1027,13 +1031,6 @@ def doMainLoop(screen, background, tile):
         pygame.display.flip()
         pygame.time.wait(25)
 
-    # New highscore?
-    global _highScore
-    if state.penguinScore > _highScore:
-        _highScore=state.penguinScore
-        addText("New Highscore!", background, 270, 330, \
-                THECOLORS['lightgreen'], (0,0,0), 30, True)
-    # Show GAME OVER
     addText("GAME OVER", background, 270, 270, \
             THECOLORS['lightgreen'], cavebackground, 50, True)
     addText("[SPACE] to continue", background, 310, 560, \
