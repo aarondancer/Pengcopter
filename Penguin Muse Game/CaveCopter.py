@@ -229,9 +229,6 @@ class PengServer(ServerThread):
     clevel = 0.0
     acc = 0.0
 
-    def printAcc(self):
-        print self.acc
-
     @make_method("/muse/elements/experimental/concentration", 'f')
     def concentration_callback(self, path, args):
         self.clevel = 1 - sqrt((sum(args) / float(len(args))))
@@ -246,8 +243,29 @@ class PengServer(ServerThread):
     def acc_callback(self, path, args):
         self.acc = args[0]
 
+class hsServer(ServerThread):
+    def __init__(self):
+        ServerThread.__init__(self, 5003)
+
+    @make_method("/muse/elements/horseshoe", 'ffff')
+    def horseshoe_callback(self, path, args):
+        global LE
+        global LF
+        global RF
+        global RE
+        LE = args[0]
+        LF = args[1]
+        RF = args[2]
+        RE = args[3]
+
 try:
     server = PengServer()
+except ServerError, err:
+    print str(err)
+    sys.exit()
+
+try:
+    hserver = hsServer()
 except ServerError, err:
     print str(err)
     sys.exit()
@@ -892,6 +910,7 @@ def doEntryLoop(screen,background):
 
     global _backgroundWidth
     global _titleImage
+    hserver.start()
     # Draw static background
     tile=CaveTile()
     tile.topSpace=0
