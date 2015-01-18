@@ -1,12 +1,13 @@
 #Import Modules
-import sys, os, pygame, random, time, pygame.gfxdraw
+import sys, os, pygame, random, pygame.gfxdraw, pygame.surface, pygame.mixer
 from pygame import *
 from pygame.transform import *
 from pygame.color import *
 from liblo import *
+from pygame.locals import *
 from math import sqrt
+import time
 
-# screen dimensions
 _backgroundWidth=800
 _backgroundHeight=600
 
@@ -15,6 +16,19 @@ global screen
 screen = pygame.display.set_mode((_backgroundWidth, _backgroundHeight))#, pygame.FULLSCREEN)
 pygame.display.set_caption('Penguin Muse')
 pygame.mouse.set_visible(1)
+
+# High score
+_highScore=0
+
+time1 = time.clock()
+
+# Cave BackgroundColor
+cavebackground = (52, 73,94)
+
+##############################################################
+### Utility functions
+##############################################################
+
 
 # load image
 def loadImage(name, colorkey=None):
@@ -33,21 +47,27 @@ def loadImage(name, colorkey=None):
     return image, image.get_rect()
 
 # images
-global _copterImage
+global _penguinImage
 global _ufoImage
 global _ufoKillImage
 global _ufoShotImage
 global _fuelImage
 global _mineImage
 global _titleImage
+global _orcaImage
+global _poopImage
+global _sealImage
+global _healthImage
 # global _bgImage
-_copterImage=loadImage('res/penguinlg.png')
+_penguinImage=loadImage('res/pennapps.png')
 _ufoImage=loadImage('res/orca.png')
-_ufoKillImage=loadImage('res/enemyUFOKill.png')
-_ufoShotImage=loadImage('res/ufoShot.png')
 _fuelImage=loadImage('res/nemo.png')
 _mineImage=loadImage('res/emoji_poop.png')
 _titleImage=loadImage('res/penguinlg.png')
+_orcaImage=loadImage('res/orca.png')
+_poopImage=loadImage('res/emoji_poop.png')
+_sealImage=loadImage('res/seal.png')
+_healthImage=loadImage('res/nemo.png')
 
 # High score
 _highScore=0
@@ -61,42 +81,43 @@ def close():
     sys.exit()
 
 
-# Player's helicopter
+# Player's helipenguin
 class StateData():
 
     # Initialize state data instance
     def __init__(self):
 
-        # Ufo create parameter
-        self.ufoMax=1
-        self.ufoCnt=0
-        self.lastUfoCnt=-200
-        self.doUfoCnt=50
+        # Orca create parameter
+        self.orcaMax=2
+        self.orcaCnt=0
+        self.lastOrcaCnt=-200
+        self.doOrcaCnt=50
         self.maxYDelta=1
 
-        # Ufo shot create parameter
-        self.ufoShotMax=1
-        self.ufoShotCnt=0
-        self.ufoShotRnd=1000
-        self.doUfoShot=25
+        # Seal create parameter
+        self.sealMax=1
+        self.sealCnt=0
+        self.lastSealCnt=-200
+        self.doSealCnt=50
+        self.maxYDelta=1
 
-        # Mine create parameter
-        self.mineMax=5
-        self.mineCnt=0
-        self.mineRnd=1000
-        self.lastMineCnt=0
-        self.doMine=25
+        # Poop create parameter
+        self.poopMax=3
+        self.poopCnt=0
+        self.poopRnd=1000
+        self.lastPoopCnt=0
+        self.doPoop=25
 
-        # Fuel create parameter
-        self.fuelMax=1
-        self.fuelCnt=0
-        self.lastFuelCnt=-600
-        self.doFuelCnt=500
+        # Health create parameter
+        self.healthMax=4
+        self.healthCnt=0
+        self.lastHealthCnt=-600
+        self.doHealthCnt=500
 
 
-        # Copter state
-        self.copterFuel=5000
-        self.copterScore=0
+        # Penguin state
+        self.penguinHealth=1000
+        self.penguinScore=0
 
 
         # Level parameter
@@ -108,7 +129,7 @@ class StateData():
         self.sectorCnt=0
         self.nextSectorCnt=2500
 
-    # Adjusts state data to next sector
+        # Adjusts state data to next sector
     def nextSector(self, tile):
 
         # Check if new sector reached
@@ -125,58 +146,53 @@ class StateData():
 
             # Increase game difficulty
             if self.sector%4 == 0:
-                self.mineMax=self.mineMax+1
+                self.poopMax=self.poopMax+1
             elif self.sector%3 == 0:
-                self.ufoMax=self.ufoMax+1
-            elif self.sector%2 == 0:
-                self.ufoShotMax=self.ufoShotMax+1
+                self.orcaMax=self.orcaMax+1
 
             if tile.minSpace>100:
                 tile.minSpace=tile.minSpace-25
 
             if self.sector == 3 or self.sector == 5:
                 self.maxYDelta=self.maxYDelta+1
-
 # Game state data
 global state
 state = StateData()
 
-# Player's helicopter
-class Copter(pygame.sprite.Sprite):
+# Player's helipenguin
+class Penguin(pygame.sprite.Sprite):
 
-    # Init helicopter instance
+    # Init helipenguin instance
     def __init__(self, xpos=50, ypos=280, state=None):
 
-        global _copterImage
+        global _penguinImage
         pygame.sprite.Sprite.__init__(self) #call Sprite initializer
-        picture = _copterImage[0]
-        picture = pygame.transform.smoothscale(picture, (40,40))
-        self.image= picture
-        self.rect= picture.get_rect()
+        self.image, self.rect=_penguinImage
         self.imageNormal=self.image
-        self.image=pygame.transform.rotate(self.image, 10)
-        self.imageForward=pygame.transform.rotate(self.image, -10)
+        self.image=pygame.transform.rotate(self.image, 20)
+        # self.imageForward=pygame.transform.rotate(self.image, -10)
         self.rect.top=ypos
         self.rect.left=xpos
         self.xmove=0
         self.ymove=0
-        self.xdelta=0
-        self.ydelta=0
+        self.xdelta=2
+        self.ydelta=2
         self.xpos=xpos
         self.ypos=ypos
         self.state=state
         self.area = pygame.display.get_surface().get_rect()
 
-    # Update helicopter settings
+    # Update helipenguin settings
     def update(self):
 
-        # Drop copter if no fuel left
-        if self.state.copterFuel<=0:
+        # Drop penguin if no health left
+        if self.state.penguinHealth<=0:
             self.ymove=2
+            # reset health to 0 if negative value
+            self.state.penguinHealth=0
+        
 
-        self.image=self.imageNormal
-
-        # Adjust helicopter position
+        # Adjust helipenguin position
         newpos = self.rect.move((self.xmove, self.ymove))
         if newpos.left<=0:
             newpos.left=0
@@ -185,13 +201,14 @@ class Copter(pygame.sprite.Sprite):
 
         self.rect = newpos
 
-    # Helicopter has collided with background
+    # Helipenguin has collided with background
     def collidedBackground(self):
+
         self.kill()
         print ">>>> collided"
 
-global copter
-copter = Copter(275, 280, state)
+global penguin
+penguin = Penguin(275, 280, state)
 
 class PengServer(ServerThread):
 
@@ -209,7 +226,7 @@ class PengServer(ServerThread):
     @make_method("/muse/elements/experimental/concentration", 'f')
     def concentration_callback(self, path, args):
         self.clevel = 1 - sqrt((sum(args) / float(len(args))))
-        copter.ymove += (self.acc * self.clevel)/112
+        penguin.ymove += (self.acc * self.clevel)/112
 
     @make_method("/muse/acc", 'fff')
     def acc_callback(self, path, args):
@@ -275,63 +292,68 @@ def checkBackgroundCollision(background, toCheck, toCheckGroup):
         return result
 
 # Checks UFO collisions with other objects
-def checkUfoCollisions(ufoGroup, killedGroup, state, background):
+def checkOrcaCollisions(orcaGroup, killedGroup, state, background):
 
-    # Avoid ufo collisions with cave
-    ufos=ufoGroup.sprites()
-    for ndx in range(len(ufos)):
-        ufo=ufos[ndx]
-        if ufo.rect.left>=0:
-            checkBackgroundCollision(background,ufo,ufoGroup)
+    # Avoid orca collisions with cave
+    orcas=orcaGroup.sprites()
+    for ndx in range(len(orcas)):
+        orca=orcas[ndx]
+        if orca.rect.left>=0:
+            checkBackgroundCollision(background,orca,orcaGroup)
 
     # Handle killed UFOs
     handleKilledEnemies(killedGroup)
 
-# Checks copter collisions with other objects
-def checkCopterCollisions(copter, ufoGroup, fuelGroup, \
-                          mineGroup, ufoShotGroup, state):
-            # Check helicopter collision with UFO
-        collgroup=pygame.sprite.spritecollide(copter, ufoGroup, 0, pygame.sprite.collide_mask)
+def checkSealCollisions(sealGroup, killedGroup, state, background):
+
+    # Avoid orca collisions with cave
+    seals=sealGroup.sprites()
+    for ndx in range(len(seals)):
+        seal=seals[ndx]
+        if seal.rect.left>=0:
+            checkBackgroundCollision(background,seal,sealGroup)
+
+    # Handle killed UFOs
+    handleKilledEnemies(killedGroup)
+
+def checkNemoCollisions(nemoGroup, state, background):
+    # Avoid nemo collisions with cave
+    nemos = nemoGroup.sprites()
+    for ndx in range(len(nemos)):
+        nemo = nemos[ndx]
+        if nemo.rect.left>=0:
+            checkBackgroundCollision(background,nemo,nemoGroup)
+
+# Checks penguin collisions with other objects
+def checkPenguinCollisions(penguin, orcaGroup, healthGroup, sealGroup, \
+                          poopGroup, state):
+            # Check helipenguin collision with UFO
+        collgroup=pygame.sprite.spritecollide(penguin, orcaGroup, sealGroup, pygame.sprite.collide_mask)
         if len(collgroup) > 0:
-            state.copterFuel=state.copterFuel-5
-            if state.fuelCnt<0:
-                state.fuelCnt=0
+            state.penguinHealth=state.penguinHealth-5
+            if state.healthCnt<0:
+                state.healthCnt=0
 
-        # Check helicopter collision with fuel tank
-        collgroup=pygame.sprite.spritecollide(copter, fuelGroup, 0)
+        # Check helipenguin collision with nemo
+        collgroup=pygame.sprite.spritecollide(penguin, healthGroup, 0)
         if len(collgroup) > 0:
-            collgroup[0].fuel=collgroup[0].fuel-1
-            if collgroup[0].fuel<=0:
-                fuelGroup.remove(collgroup[0])
-                state.fuelCnt=0
-                state.lastFuelCnt=0
-            state.copterFuel=state.copterFuel+1
+            collgroup[0].health=collgroup[0].health-1
+            if collgroup[0].health<=0:
+                healthGroup.remove(collgroup[0])
+                state.healthCnt=0
+                state.lastHealthCnt=0
+            state.penguinHealth=state.penguinHealth+50
 
-        # Check helicopter collision with mine
-        collgroup=pygame.sprite.spritecollide(copter, mineGroup, 1)
+        # Check helipenguin collision with poop
+        collgroup=pygame.sprite.spritecollide(penguin, poopGroup, 1)
         if len(collgroup) > 0:
-            state.mineCnt=state.mineCnt-1
-            state.copterFuel=state.copterFuel-50
-
-        # Check helicopter collision with ufo shot
-        collgroup=pygame.sprite.spritecollide(copter, ufoShotGroup, 1)
-        if len(collgroup) > 0:
-            state.ufoShotCnt=state.ufoShotCnt-1
-            state.copterFuel=state.copterFuel-50
-
-# Checks ufo shot collisions with background
-def checkUfoShotCollisions(ufoShotGroup, state, background):
-
-        # Check shot collisions with cave
-        shots=ufoShotGroup.sprites()
-        for ndx in range(len(shots)):
-            shot=shots[ndx]
-            checkBackgroundCollision(background, shot, ufoShotGroup)
+            state.poopCnt=state.poopCnt-1
+            state.penguinHealth=state.penguinHealth-50
 
 # Handles disappearence of killed enemies from screen
 def handleKilledEnemies(killedGroup):
 
-    # Check if there are exploded ufos to be removed
+    # Check if there are exploded orcas to be removed
     toBeRemoved=[]
     for ndx in range(len(killedGroup.sprites())):
         killed=killedGroup.sprites()[ndx]
@@ -342,78 +364,51 @@ def handleKilledEnemies(killedGroup):
     for ndx in range(len(toBeRemoved)):
         killedGroup.remove(toBeRemoved[ndx])
 
-# Adds randomly fuel tanks
-def addFuel(tile, fuelGroup, state, topSpace):
+# Adds randomly Nemos
+def addHealth(tile, healthGroup, state, topSpace):
 
     global _backgroundWidth
     global _backgroundHeight
 
-    state.lastFuelCnt=state.lastFuelCnt+1
-    doAdd=random.randint(1,100)
-    if state.fuelCnt<state.fuelMax and state.lastFuelCnt>state.doFuelCnt:
+    state.lastHealthCnt=state.lastHealthCnt+1
+    doAdd=random.randint(1,50)
+    if state.healthCnt<state.healthMax and state.lastHealthCnt>state.doHealthCnt:
         if doAdd==1:
             x=random.randint(1, 2)
             if x==1:
+                ymove=random.randint(1,state.maxYDelta)
                 position=tile.top_tileHeight+topSpace+random.randint(20, 40)
             else:
+                ymove=-random.randint(1,state.maxYDelta)
                 position=_backgroundHeight-tile.btm_tileHeight-random.randint(30, 50)
-            fuel=FuelTank(_backgroundWidth-50, position, fuelGroup, state)
-            fuelGroup.add(fuel)
-            state.fuelCnt=state.fuelCnt+1
-            state.lastFuelCnt=0
+            health=Nemo(_backgroundWidth-50, position, healthGroup, state)
+            health.ymove = ymove
+            healthGroup.add(health)
+            state.healthCnt=state.healthCnt+1
+            state.lastHealthCnt=0
 
+# Adds randomly enemy poops
+def addPoop(orcaGroup, poopGroup, state):
 
-# Adds randomly enemy mines
-def addMine(ufoGroup, mineGroup, state):
-
-    # Iterate over ufos and create mines randomly
-    for ndx in range(len(ufoGroup.sprites())):
-        ufo=ufoGroup.sprites()[ndx]
-        if state.mineCnt<state.mineMax:
-            mineDeterminator=random.randint(1, state.mineRnd)
-            if mineDeterminator<=state.doMine:
-                state.mineCnt=state.mineCnt+1
-                mine=Mine(ufo.rect.left+10, ufo.rect.top+20, mineGroup, state)
-                mineGroup.add(mine)
-
-
-# Adds randomly ufo shots
-def addUfoShot(copter, ufoGroup, ufoShotGroup, state):
-
-    # Iterate over ufos and create mines randomly
-    for ndx in range(len(ufoGroup.sprites())):
-        ufo=ufoGroup.sprites()[ndx]
-        if state.ufoShotCnt<state.ufoShotMax:
-            shotDeterminator=random.randint(1, state.ufoShotRnd)
-            if shotDeterminator<=state.doUfoShot:
-                state.ufoShotCnt=state.ufoShotCnt+1
-                xdist=ufo.rect.left-copter.rect.left
-                ydist=ufo.rect.top-copter.rect.top
-                if abs(xdist)>abs(ydist):
-                    if xdist < 0:
-                        xmove=4
-                    else:
-                        xmove=-4
-                    ymove=0
-                else:
-                    if ydist < 0:
-                        ymove=4
-                    else:
-                        ymove=-4
-                    xmove=0
-
-                shot=UFOShot(ufo.rect.left+10, ufo.rect.top+20, xmove, ymove, ufoShotGroup, state)
-                ufoShotGroup.add(shot)
+    # Iterate over orcas and create poops randomly
+    for ndx in range(len(orcaGroup.sprites())):
+        orca=orcaGroup.sprites()[ndx]
+        if state.poopCnt<state.poopMax:
+            poopDeterminator=random.randint(1, state.poopRnd)
+            if poopDeterminator<=state.doPoop:
+                state.poopCnt=state.poopCnt+1
+                poop=Poop(orca.rect.left+10, orca.rect.top+20, poopGroup, state)
+                poopGroup.add(poop)
 
 # Adds randomly enemy UFOs
-def addUfo(tile, ufoGroup, state, topSpace):
+def addOrca(tile, orcaGroup, state, topSpace):
 
     global _backgroundWidth
     global _backgroundHeight
 
-    state.lastUfoCnt=state.lastUfoCnt+1
+    state.lastOrcaCnt=state.lastOrcaCnt+1
     doAdd=random.randint(1, 30)
-    if state.ufoCnt<state.ufoMax and state.lastUfoCnt>state.doUfoCnt:
+    if state.orcaCnt<state.orcaMax and state.lastOrcaCnt>state.doOrcaCnt:
         if doAdd==1:
             x=random.randint(1, 2)
             if x==1:
@@ -423,11 +418,35 @@ def addUfo(tile, ufoGroup, state, topSpace):
                 ymove=-random.randint(1,state.maxYDelta)
                 position=_backgroundHeight-tile.btm_tileHeight-random.randint(20, 30)
 
-            ufo=Ufo(_backgroundWidth-50, position-ymove, ufoGroup, state)
-            ufo.ymove=ymove
-            ufoGroup.add(ufo)
-            state.ufoCnt=state.ufoCnt+1
-            state.lastUfoCnt=0
+            orca=Orca(_backgroundWidth-50, position-ymove, orcaGroup, state)
+            orca.ymove=ymove
+            orcaGroup.add(orca)
+            state.orcaCnt=state.orcaCnt+1
+            state.lastOrcaCnt=0
+
+
+def addSeal(tile, sealGroup, state, topSpace):
+
+    global _backgroundWidth
+    global _backgroundHeight
+
+    state.lastSealCnt=state.lastSealCnt+1
+    doAdd=random.randint(1, 1000)
+    if state.sealCnt<state.sealMax and state.lastSealCnt>state.doSealCnt:
+        if doAdd==1:
+            x=random.randint(1, 2)
+            if x==1:
+                ymove=random.randint(1,state.maxYDelta)
+                position=tile.top_tileHeight+topSpace+random.randint(20, 30)
+            else:
+                ymove=-random.randint(1,state.maxYDelta)
+                position=_backgroundHeight-tile.btm_tileHeight-random.randint(20, 30)
+
+            seal=Seal(_backgroundWidth-50, position-ymove, sealGroup, state)
+            seal.ymove=ymove
+            sealGroup.add(seal)
+            state.sealCnt=state.sealCnt+1
+            state.lastSealCnt=0
 
 # Add text to provided background
 def addText(text, background, xpos, ypos, \
@@ -445,12 +464,12 @@ def addText(text, background, xpos, ypos, \
     background.blit(text, (xpos, ypos));
 
 # Update game information on top of the screen
-def updateCopterInfo(background, state):
-
-    addText("Health: " + str(state.copterFuel), background, 15, 3, THECOLORS['lightgrey'], (0,0,0), 20)
+def updatePenguinInfo(background, state):
+    time2 = time.clock()
+    addText("Health: " + str(state.penguinHealth), background, 15, 3, THECOLORS['lightgrey'], (0,0,0), 20)
     addText("Sector: " + str(state.sector), background, 210, 3, THECOLORS[state.sectorColor], (0,0,0), 20)
-    addText("Score: " + str(state.copterScore), background, 410, 3, THECOLORS['cyan'], (0,0,0), 20)
-    
+    addText("Score: " + str(int ((10 * (round (time2 - time1, 1)))/2)), background, 440, 3, THECOLORS['cyan'], (0,0,0), 20)
+
 # Explodes sprite into several fragments returned in a sprite group
 def explodeSprite(toExplode=None, xtiles=0, ytiles=0):
 
@@ -461,7 +480,7 @@ def explodeSprite(toExplode=None, xtiles=0, ytiles=0):
     tileGroup = pygame.sprite.RenderPlain()
     tileTop=toExplode.rect.top
     for ycnt in range(ytiles):
-        # Determine y tile dimension
+        # Deterpoop y tile dimension
         tileTop=tileTop+tileHeight
         ypos=ycnt*tileHeight
         currentTileHeight=tileHeight
@@ -470,7 +489,7 @@ def explodeSprite(toExplode=None, xtiles=0, ytiles=0):
 
         tileLeft=toExplode.rect.left
         for xcnt in range(xtiles):
-            # Determine x tile dimension
+            # Deterpoop x tile dimension
             tileLeft=tileLeft+tileWidth
             xpos=xcnt*tileWidth
             currentTileWidth=tileWidth
@@ -533,7 +552,7 @@ class CaveTile():
         pygame.gfxdraw.box(tile,(0,0,self.tileWidth,self.top_tileHeight), self.color)
 
         # Middle Opening
-        pygame.gfxdraw.box(tile, (0,self.top_tileHeight, self.tileWidth, self.landHeight - self.btm_tileHeight), cavebackground)
+        pygame.gfxdraw.box(tile, (0,max(self.top_tileHeight, 0), self.tileWidth, self.landHeight - self.btm_tileHeight), cavebackground)
 
         # Bottom Tile
         pygame.gfxdraw.box(tile, (0,self.landHeight-self.btm_tileHeight, \
@@ -626,111 +645,73 @@ class ExplodeTile(pygame.sprite.Sprite):
         self.rect.left=int(self.xpos)
         self.rect.top=int(self.ypos)
 
-# Fuel tank
-class FuelTank(pygame.sprite.Sprite):
+# Nemo/Health supply
+class Nemo(pygame.sprite.Sprite):
 
-    # Init fuel tankeinstance
-    def __init__(self, xpos=800, ypos=300, fuelGroup=None, gameState=None):
+    # Init nemo instance
+    def __init__(self, xpos=800, ypos=300, healthGroup=None, gameState=None):
 
-        global _fuelImage
+        global _healthImage
         pygame.sprite.Sprite.__init__(self) #call Sprite initializer
-        self.image, self.rect=_fuelImage
+        self.image, self.rect=_healthImage
         self.rect.top=ypos
         self.rect.left=xpos
-        self.xmove=-1
-        self.ymove=0
-        self.fuelGroup=fuelGroup
+        self.xmove = -1
+        self.ymove = 0
+        self.healthGroup=healthGroup
         self.gameState=gameState
-        self.fuel=1
+        self.health=1
+        self.lastReverseCnt=0
 
-    # Update fuel tank settings
+    # Update health tank settings
     def update(self):
 
-        # Adjust fuel tank position
+        # Adjust health tank position
         newpos = self.rect.move((self.xmove, self.ymove))
         self.rect=newpos
 
-        # Remove fuel tank leaving screen
+        # Remove health tank leaving screen
         if self.rect.left==-30:
-            self.gameState.fuelCnt=self.gameState.fuelCnt-1
-            self.fuelGroup.remove(self)
+            self.gameState.healthCnt=self.gameState.healthCnt-1
+            self.healthGroup.remove(self)
 
-
-
-# Mines are dropped by Ufos
-class Mine(pygame.sprite.Sprite):
-
-    # Init fuel tankeinstance
-    def __init__(self, xpos=800, ypos=300, mineGroup=None, gameState=None):
-
-        pygame.sprite.Sprite.__init__(self) #call Sprite initializer
-        self.image, self.rect=_mineImage
-        self.rect.top=ypos
-        self.rect.left=xpos
-        self.xmove=-1
-        self.ymove=0
-        self.gameState=gameState
-        self.mineGroup=mineGroup
-
-    # Update fuel tank settings
+    # Update UFO settings
     def update(self):
-        global _backgroundWidth
 
-        # Remove mine leaving screen
-        if self.rect.left<=0:
-            self.gameState.mineCnt=self.gameState.mineCnt-1
-            self.mineGroup.remove(self)
-
-#  Ufo Shot
-class UFOShot(pygame.sprite.Sprite):
-
-    # Init fuel tankeinstance
-    def __init__(self, xpos=-1, ypos=-1, xmove=0, ymove=0, \
-                 ufoShotGroup=None, gameState=None):
-
-        pygame.sprite.Sprite.__init__(self) #call Sprite initializer
-        self.image, self.rect=_ufoShotImage
-        self.rect.top=ypos
-        self.rect.left=xpos
-        self.xmove=xmove
-        self.ymove=ymove
-        self.gameState=gameState
-        self.ufoShotGroup=ufoShotGroup
-
-    # Update Ufo shot settings
-    def update(self):
-        global _backgroundWidth
-
-        # Adjust shot position
+        # Adjust UFO position
         newpos = self.rect.move((self.xmove, self.ymove))
         self.rect=newpos
 
-        # Remove shot leaving screen
-        if self.rect.left<=0 or self.rect.left>=_backgroundWidth-self.rect.width:
-            self.gameState.ufoShotCnt=self.gameState.ufoShotCnt-1
-            self.ufoShotGroup.remove(self)
+        # Remove UFO leaving screen
+        if self.rect.left==-30:
+            self.gameState.healthCnt=self.gameState.sealCnt-1
+            self.healthGroup.remove(self)
 
-    # Ufo shot has collided with background
+        # Increase last reverse counter
+        self.lastReverseCnt=self.lastReverseCnt+1
+
+    # Seal has collided with background
     def collidedBackground(self):
+        # Revert movement direction
+        if self.lastReverseCnt > 30:
+            self.ymove=-self.ymove
+            self.lastReverseCnt=0
 
-        self.gameState.ufoShotCnt=self.gameState.ufoShotCnt-1
-        self.ufoShotGroup.remove(self)
 
-
-# Enemy UFO
-class Ufo(pygame.sprite.Sprite):
+# Enemy Orca
+class Orca(pygame.sprite.Sprite):
 
     # Init UFO instance
-    def __init__(self, xpos=800, ypos=300, ufoGroup=None, gameState=None):
+    def __init__(self, xpos=800, ypos=300, orcaGroup=None, gameState=None):
 
-        global _ufoImage
+        global _orcaImage
         pygame.sprite.Sprite.__init__(self) #call Sprite initializer
-        self.image, self.rect=_ufoImage
+        self.image, self.rect=_orcaImage
         self.rect.top=ypos
         self.rect.left=xpos
         self.xmove=-2
         self.ymove=0
-        self.ufoGroup=ufoGroup
+        self.orcaGroup=orcaGroup
         self.gameState=gameState
         self.lastReverseCnt=0
         self.killCnt=25
@@ -744,19 +725,90 @@ class Ufo(pygame.sprite.Sprite):
 
         # Remove UFO leaving screen
         if self.rect.left==-30:
-            self.gameState.ufoCnt=self.gameState.ufoCnt-1
-            self.ufoGroup.remove(self)
+            self.gameState.orcaCnt=self.gameState.orcaCnt-1
+            self.orcaGroup.remove(self)
 
         # Increase last reverse counter
         self.lastReverseCnt=self.lastReverseCnt+1
 
-    # Ufo has collided with background
+    # Orca has collided with background
     def collidedBackground(self):
 
         # Revert movement direction
         if self.lastReverseCnt > 30:
             self.ymove=-self.ymove
             self.lastReverseCnt=0
+
+# Poops are dropped by Orcas
+class Poop(pygame.sprite.Sprite):
+
+    # Init poop instance
+    def __init__(self, xpos=800, ypos=300, poopGroup=None, gameState=None):
+
+        global _rocketImage
+        pygame.sprite.Sprite.__init__(self) #call Sprite initializer
+        self.image, self.rect=_poopImage
+        self.rect.top=ypos
+        self.rect.left=xpos
+        self.xmove=-1
+        self.ymove=0
+        self.gameState=gameState
+        self.poopGroup=poopGroup
+
+    # Update settings
+    def update(self):
+        global _backgroundWidth
+
+        # Adjust rocket position
+        newpos = self.rect.move((self.xmove, self.ymove))
+        self.rect=newpos
+
+        # Remove poop leaving screen
+        if self.rect.left<=0:
+            self.gameState.poopCnt=self.gameState.poopCnt-1
+            self.poopGroup.remove(self)
+
+# Enemy Seal
+class Seal(pygame.sprite.Sprite):
+
+    # Init Seal instance
+    def __init__(self, xpos=800, ypos=400, sealGroup=None, gameState=None):
+
+        global _sealImage
+        pygame.sprite.Sprite.__init__(self) #call Sprite initializer
+        self.image, self.rect=_sealImage
+        self.rect.top=ypos
+        self.rect.left=xpos
+        self.xmove=-2
+        self.ymove=0
+        self.sealGroup=sealGroup
+        self.gameState=gameState
+        self.lastReverseCnt=0
+        self.killCnt=25
+
+    # Update UFO settings
+    def update(self):
+
+        # Adjust UFO position
+        newpos = self.rect.move((self.xmove, self.ymove))
+        self.rect=newpos
+
+        # Remove UFO leaving screen
+        if self.rect.left==-30:
+            self.gameState.sealCnt=self.gameState.sealCnt-1
+            self.sealGroup.remove(self)
+
+        # Increase last reverse counter
+        self.lastReverseCnt=self.lastReverseCnt+1
+
+    # Orca has collided with background
+    def collidedBackground(self):
+
+        # Revert movement direction
+        if self.lastReverseCnt > 30:
+            self.ymove=-self.ymove
+            self.lastReverseCnt=0
+            
 
 # Manages a sprite explosion
 class SpriteExplosion():
@@ -772,6 +824,33 @@ class SpriteExplosion():
         # Calculate number of tiles for explosion
         self.tileWidth=toExplode.get_rect().width/self.xtiles
         self.tileHeigh=toExplode.get_rect().height/self.ytiles
+
+    # Adjusts state data to next sector
+    def nextSector(self, tile):
+
+        # Check if new sector reached
+        self.sectorCnt=self.sectorCnt+1
+        if self.sectorCnt >= self.nextSectorCnt:
+            self.sector=self.sector+1
+            self.sectorCnt=0
+
+            # Set new cave color for sector
+            self.sectorColorCnt=self.sectorColorCnt+1
+            if self.sectorColorCnt >= len(self.sectorColors):
+                self.sectorColorCnt=0
+            self.sectorColor=self.sectorColors[self.sectorColorCnt]
+
+            # Increase game difficulty
+            if self.sector%4 == 0:
+                self.poopMax=self.poopMax+1
+            elif self.sector%3 == 0:
+                self.orcaMax=self.orcaMax+1
+
+            if tile.minSpace>100:
+                tile.minSpace=tile.minSpace-25
+
+            if self.sector == 3 or self.sector == 5:
+                self.maxYDelta=self.maxYDelta+1
 
 #############################################################
 ### Main functions
@@ -790,14 +869,15 @@ def doEntryLoop(screen,background):
     for x in range(_backgroundWidth):
         cave=tile.fetchTile()
         background.blit(cave, (x,tile.topSpace))
-    addText("Highscore: " + str(_highScore), background, 310, 30, \
+    addText("Highscore: " + str(_highScore), background, 310, 20, \
             THECOLORS['white'], THECOLORS['black'], 20, True)
     addText("[SPACE] to continue", background, 310, 555, \
             THECOLORS['black'], THECOLORS['lightblue'], 20, True)
     addText("Pennjamin's Travels", background, 310, 405, \
             THECOLORS['white'], THECOLORS['lightblue'], 48, True)
     picture = _titleImage[0]
-    picture = pygame.transform.smoothscale(_titleImage[0], (300,300))
+    picture = pygame.transform.smoothscale(picture, (300,300))
+    picture = pygame.transform.rotate(picture, 90)
     background.blit(picture, (255,80))
     screen.blit(background, (0,0))
     pygame.display.flip()
@@ -814,7 +894,7 @@ def doEntryLoop(screen,background):
             if event.type == KEYDOWN:
                 if event.key == 32:
                     doLoop=False
-                    copter = Copter(275, 280, state)
+                    penguin = Penguin(275, 280, state)
                     server.start()
 
 
@@ -829,25 +909,26 @@ def doEntryLoop(screen,background):
 
 # Process main game loop
 def doMainLoop(screen, background, tile):
-    global copter
-    copter = Copter(275, 280, state)
+    global penguin
+    penguin = Penguin(275, 280, state)
+
+    # Create helipenguin
+    penguin=Penguin(275, 280, state)
+    
     # Create sprite groups
-    copterGroup = pygame.sprite.RenderPlain((copter))
-    ufoGroup = pygame.sprite.RenderPlain()
-    ufoShotGroup = pygame.sprite.RenderPlain()
+    penguinGroup = pygame.sprite.RenderPlain((penguin))
+    orcaGroup = pygame.sprite.RenderPlain()
+    sealGroup = pygame.sprite.RenderPlain()
     killedGroup = pygame.sprite.RenderPlain()
-    fuelGroup = pygame.sprite.RenderPlain()
-    mineGroup = pygame.sprite.RenderPlain()
+    nemoGroup = pygame.sprite.RenderPlain()
+    poopGroup = pygame.sprite.RenderPlain()
 
     # Main Loop
     clock=pygame.time.Clock()
     delta=1
     doContinue=True
     topSpace=30
-    fuelReductionCnt=0
-
-    # server.start()
-
+    healthReductionCnt=0
 
     while doContinue:
         clock.tick(100) # fps
@@ -858,22 +939,14 @@ def doMainLoop(screen, background, tile):
                 close()
             if event.type == KEYDOWN:
                 if event.key == 273: # up
-                    copter.ymove=-copter.ydelta
+                    penguin.ymove=-penguin.ydelta
                 if event.key == 274: # down
-                    copter.ymove=copter.ydelta
-
-                if event.key == 275: # right
-                    copter.xmove=copter.xdelta
-                if event.key == 276: # left
-                    copter.xmove=-copter.xdelta
-                #if event.key == 32: # space
-                    #fireRocket(rocketGroup, copter, state)
+                    penguin.ymove=penguin.ydelta
                 if event.key == K_ESCAPE: # esc
                     quit()
             elif event.type == KEYUP:
-                copter.xmove=0
-                copter.ymove=0
-                
+                penguin.xmove=0
+                penguin.ymove=0
                 
 
         # Scroll landsape
@@ -883,56 +956,58 @@ def doMainLoop(screen, background, tile):
         background.blit(newBackground, (0,0))
 
         # Add objects to sprite groups
-        addUfo(tile, ufoGroup, state, topSpace)
-        addUfoShot(copter, ufoGroup, ufoShotGroup, state)
-        addMine(ufoGroup, mineGroup, state)
-        addFuel(tile, fuelGroup, state, topSpace)
+        addOrca(tile, orcaGroup, state, topSpace)
+        addSeal(tile, orcaGroup, state, topSpace)
+        addPoop(orcaGroup, poopGroup, state)
+        addHealth(tile, nemoGroup, state, topSpace)
 
         # Check object collisions
-        checkUfoCollisions(ufoGroup, killedGroup, state, background)
-        doContinue=checkBackgroundCollision(background, copter, copterGroup)
-        checkCopterCollisions(copter, ufoGroup, fuelGroup, \
-                              mineGroup, ufoShotGroup, state)
-        checkUfoShotCollisions(ufoShotGroup, state, background)
+        checkOrcaCollisions(orcaGroup, killedGroup, state, background)
+        checkSealCollisions(sealGroup, killedGroup, state, background)
+        checkNemoCollisions(nemoGroup, state, background)
+
+        doContinue=checkBackgroundCollision(background, penguin, penguinGroup)
+        checkPenguinCollisions(penguin, orcaGroup, nemoGroup, sealGroup, \
+                              poopGroup, state)
 
         # Update game state data
-        if state.copterFuel<0:
-            state.copter=0
-        updateCopterInfo(background, state)
+        if state.penguinHealth<0:
+            state.penguin=0
+        updatePenguinInfo(background, state)
 
-        # Reduce copter fuel
-        if fuelReductionCnt>10 and state.copterFuel>0:
-            state.copterFuel=state.copterFuel-1
-            fuelReductionCnt=0
-            state.copterScore=state.copterScore+1
+        # Reduce penguin health
+        if healthReductionCnt>10 and state.penguinHealth>0:
+            state.penguinHealth=state.penguinHealth-1
+            healthReductionCnt=0
+            state.penguinScore=state.penguinScore+1
 
         # Update sprites
-        copterGroup.update()
-        mineGroup.update()
-        ufoGroup.update()
-        ufoShotGroup.update()
+        penguinGroup.update()
+        poopGroup.update()
+        orcaGroup.update()
+        sealGroup.update()
         killedGroup.update()
-        fuelGroup.update()
+        nemoGroup.update()
 
         # Update screen
         screen.blit(background, (0,0))
-        fuelGroup.draw(screen)
-        copterGroup.draw(screen)
-        mineGroup.draw(screen)
-        ufoShotGroup.draw(screen)
-        ufoGroup.draw(screen)
+        nemoGroup.draw(screen)
+        penguinGroup.draw(screen)
+        poopGroup.draw(screen)
+        orcaGroup.draw(screen)
+        sealGroup.draw(screen)
         killedGroup.draw(screen)
         pygame.display.flip()
 
         # Change to next sectory
         state.nextSector(tile)
 
-    # Copter explodes
-    # server.stop()
-    explodeGroup=explodeSprite(copter,10, 4)
-    copterGroup.remove(copter)
+    # Penguin explodes
+    explodeGroup=explodeSprite(penguin,10, 4)
+    penguinGroup.remove(penguin)
 
     cnt=0
+
     while cnt<100:
 
         clock.tick(100) # fps
@@ -943,18 +1018,19 @@ def doMainLoop(screen, background, tile):
 
         # Update screen
         screen.blit(background, (0,0))
-        fuelGroup.draw(screen)
+        nemoGroup.draw(screen)
         explodeGroup.draw(screen)
-        mineGroup.draw(screen)
-        ufoGroup.draw(screen)
+        poopGroup.draw(screen)
+        sealGroup.draw(screen)
+        orcaGroup.draw(screen)
         killedGroup.draw(screen)
         pygame.display.flip()
         pygame.time.wait(25)
 
     # New highscore?
     global _highScore
-    if state.copterScore > _highScore:
-        _highScore=state.copterScore
+    if state.penguinScore > _highScore:
+        _highScore=state.penguinScore
         addText("New Highscore!", background, 270, 330, \
                 THECOLORS['lightgreen'], (0,0,0), 30, True)
     # Show GAME OVER
@@ -984,7 +1060,7 @@ def doMainLoop(screen, background, tile):
 
 # Entrypoint
 def main():
-
+    
     # Main window dimension
     global backgroundWidth
     mainWindowWidth=_backgroundWidth
