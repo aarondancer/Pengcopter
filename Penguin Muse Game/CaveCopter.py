@@ -222,7 +222,7 @@ def checkPenguinCollisions(penguin, orcaGroup, fuelGroup, sealGroup, \
                 fuelGroup.remove(collgroup[0])
                 state.fuelCnt=0
                 state.lastFuelCnt=0
-            state.penguinFuel=state.penguinFuel+1
+            state.penguinFuel=state.penguinFuel+50
 
         # Check helipenguin collision with poop
         collgroup=pygame.sprite.spritecollide(penguin, poopGroup, 1)
