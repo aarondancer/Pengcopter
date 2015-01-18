@@ -1,39 +1,23 @@
 #Import Modules
-import sys, os, pygame, random, time
-import pygame.gfxdraw
-import pygame.surface
-import pygame.color
-import pygame.mixer
-from pygame.locals import *
+import sys, os, pygame, random, pygame.gfxdraw, pygame.surface, pygame.mixer
+from pygame import *
+from pygame.transform import *
 from pygame.color import *
+from liblo import *
+from pygame.locals import *
+from math import sqrt
+import time
 
-# images
-_penguinImage=None
-_orcaImage=None
-_sealImage=None
-_orcaKillImage=None
-_healthImage=None
-_poopImage=None
-_titleImage=None
-
-# sounds
-_heliSound=None
-_missleSound=None
-_enemySound=None
-_enemyKillSound=None
-_healthSound=None
-_healthDownSound=None
-_poopSound=None
-_penguinKillSound=None
-
-# screen dimensions
 _backgroundWidth=800
 _backgroundHeight=600
 
+pygame.init()
+global screen
+screen = pygame.display.set_mode((_backgroundWidth, _backgroundHeight), pygame.FULLSCREEN)
+pygame.display.set_caption('Penguin Muse')
+pygame.mouse.set_visible(1)
 
-# High score
-_highScore=0
-
+global time1
 time1 = time.clock()
 
 # Cave BackgroundColor
@@ -42,6 +26,7 @@ cavebackground = (52, 73,94)
 ##############################################################
 ### Utility functions
 ##############################################################
+
 
 # load image
 def loadImage(name, colorkey=None):
@@ -52,84 +37,218 @@ def loadImage(name, colorkey=None):
     except pygame.error, message:
         print 'Cannot load image:', fullname
         raise SystemExit(message)
-    image = image.convert()
+    image = image.convert_alpha()
     if colorkey is not None:
         if colorkey is -1:
             colorkey = image.get_at((0,0))
         image.set_colorkey(colorkey, RLEACCEL)
     return image, image.get_rect()
 
-# preload images
-def loadImages():
+# images
+global _penguinImage
+global _ufoImage
+global _ufoKillImage
+global _ufoShotImage
+global _fuelImage
+global _mineImage
+global _titleImage
+global _orcaImage
+global _poopImage
+global _sealImage
+global _healthImage
+# global _bgImage
+_penguinImage=loadImage('res/pennapps.png')
+_ufoImage=loadImage('res/orca.png')
+_fuelImage=loadImage('res/nemo.png')
+_mineImage=loadImage('res/emoji_poop.png')
+_titleImage=loadImage('res/penguinlg.png')
+_orcaImage=loadImage('res/orca.png')
+_poopImage=loadImage('res/emoji_poop.png')
+_sealImage=loadImage('res/seal.png')
+_healthImage=loadImage('res/nemo.png')
 
-    global _penguinImage
-    global _orcaImage
-    global _orcaKillImage
-    global _sealImage
-    global _healthImage
-    global _poopImage
-    global _titleImage
-    global _bgImage
+# Cave BackgroundColor
+cavebackground = (52, 73,94)
 
-    _penguinImage=loadImage('res/pennapps.png', (0,0,0))
-    _orcaImage=loadImage('res/orca.png', (0,0,0))
-    _sealImage=loadImage('res/seal.png', (0,0,0))
-    _healthImage=loadImage('res/nemo.png', (0,0,0))
-    _poopImage=loadImage('res/emoji_poop.png', (0,0,0))
-    _titleImage=loadImage('res/penguinlg.png',  (255,255,255))
-    _bgImage = loadImage('res/bg.jpg', (0,0,0))
+def close():
+    server.stop()
+    pygame.quit()
+    sys.exit()
 
-# load sound
-def loadSound(name):
 
-    class NoneSound:
-        def play(self): pass
-    if not pygame.mixer or not pygame.mixer.get_init():
-        return NoneSound()
-    fullname = name
-    try:
-        sound = pygame.mixer.Sound(fullname)
-    except pygame.error, message:
-        print 'Cannot load sound:', fullname
-        raise SystemExit, message
-    return sound
+# Player's helipenguin
+class StateData():
 
-# preload sounds
-def loadSounds():
+    # Initialize state data instance
+    def __init__(self):
 
-    global _heliSound
-    global _missleSound
-    global _enemySound
-    global _enemyKillSound
-    global _healthSound
-    global _healthDownSound
-    global _poopSound
-    global _penguinKillSound
+        # Orca create parameter
+        self.orcaMax=2
+        self.orcaCnt=0
+        self.lastOrcaCnt=-200
+        self.doOrcaCnt=50
+        self.maxYDelta=1
 
-    _heliSound=loadSound('res\\heli.wav')
-    _missleSound=loadSound('res\\missle.wav')
-    _enemySound=loadSound('res\\enemy.wav')
-    _enemyKillSound=loadSound('res\\enemyKill.wav')
-    _healthSound=loadSound('res\\health.wav')
-    _healthDownSound=loadSound('res\\fuelDown.wav')
-    _poopSound=loadSound('res\\poop.wav')
-    _penguinKillSound=loadSound('res\\penguinKill.wav')
+        # Seal create parameter
+        self.sealMax=1
+        self.sealCnt=0
+        self.lastSealCnt=-200
+        self.doSealCnt=50
+        self.maxYDelta=1
 
-    _enemyKillSound.set_volume(0.5)
-    _heliSound.set_volume(0.5)
-    _healthDownSound.set_volume(0.2)
-    _healthSound.set_volume(0.05)
-    _poopSound.set_volume(0.1)
-    _penguinKillSound.set_volume(0.5)
+        # Poop create parameter
+        self.poopMax=3
+        self.poopCnt=0
+        self.poopRnd=1000
+        self.lastPoopCnt=0
+        self.doPoop=25
 
-# Initialize the game window
-def initWindow(width, height):
+        # Health create parameter
+        self.healthMax=4
+        self.healthCnt=0
+        self.lastHealthCnt=-600
+        self.doHealthCnt=500
 
-    pygame.init()
-    screen = pygame.display.set_mode((width, height))
-    pygame.display.set_caption('Penguin Muse')
-    pygame.mouse.set_visible(1)
-    return screen
+
+        # Penguin state
+        self.penguinHealth=1000
+        self.penguinScore=0
+
+
+        # Level parameter
+        self.sectorColors=['skyblue', 'skyblue', 'lightblue', 'lightblue',
+                          'skyblue', 'skyblue', 'lightblue', 'lightblue']
+        self.sectorColorCnt=0
+        self.sectorColor=self.sectorColors[self.sectorColorCnt]
+        self.sector=1
+        self.sectorCnt=0
+        self.nextSectorCnt=2500
+
+    def resetHealthAndScore(self):
+        global time1
+        time1 = time.clock()
+        self.penguinHealth = 1000
+        self.penguinScore = 0
+
+        # Adjusts state data to next sector
+    def nextSector(self, tile):
+
+        # Check if new sector reached
+        self.sectorCnt=self.sectorCnt+1
+        if self.sectorCnt >= self.nextSectorCnt:
+            self.sector=self.sector+1
+            self.sectorCnt=0
+
+            # Set new cave color for sector
+            self.sectorColorCnt=self.sectorColorCnt+1
+            if self.sectorColorCnt >= len(self.sectorColors):
+                self.sectorColorCnt=0
+            self.sectorColor=self.sectorColors[self.sectorColorCnt]
+
+            # Increase game difficulty
+            if self.sector%4 == 0:
+                self.poopMax=self.poopMax+1
+            elif self.sector%3 == 0:
+                self.orcaMax=self.orcaMax+1
+
+            if tile.minSpace>100:
+                tile.minSpace=tile.minSpace-25
+
+            if self.sector == 3 or self.sector == 5:
+                self.maxYDelta=self.maxYDelta+1
+# Game state data
+global state
+state = StateData()
+
+# Player's helipenguin
+class Penguin(pygame.sprite.Sprite):
+
+    # Init helipenguin instance
+    def __init__(self, xpos=50, ypos=280, state=None):
+
+        global _penguinImage
+        pygame.sprite.Sprite.__init__(self) #call Sprite initializer
+        self.image, self.rect=_penguinImage
+        self.imageNormal=self.image
+        self.image=pygame.transform.rotate(self.image, 20)
+        # self.imageForward=pygame.transform.rotate(self.image, -10)
+        self.rect.top=ypos
+        self.rect.left=xpos
+        self.xmove=0
+        self.ymove=0
+        self.xdelta=2
+        self.ydelta=2
+        self.xpos=xpos
+        self.ypos=ypos
+        self.state=state
+        self.area = pygame.display.get_surface().get_rect()
+
+    # Update helipenguin settings
+    def update(self):
+
+        # Drop penguin if no health left
+        if self.state.penguinHealth<=0:
+            self.ymove=2
+            # reset health to 0 if negative value
+            self.state.penguinHealth=0
+        
+
+        # Adjust helipenguin position
+        newpos = self.rect.move((self.xmove, self.ymove))
+        if newpos.left<=0:
+            newpos.left=0
+        elif newpos.left+newpos.width>=800:
+            newpos.left=newpos.left-self.xdelta
+
+        self.rect = newpos
+
+    # Helipenguin has collided with background
+    def collidedBackground(self):
+        self.kill()
+        print ">>>> collided"
+
+global penguin
+penguin = Penguin(275, 280, state)
+
+class PengServer(ServerThread):
+
+    def __init__(self):
+        ServerThread.__init__(self, 5001)
+
+    global acc
+    global clevel
+    clevel = 0.0
+    acc = 0.0
+
+    def printAcc(self):
+        print self.acc
+
+    @make_method("/muse/elements/experimental/concentration", 'f')
+    def concentration_callback(self, path, args):
+        self.clevel = 1 - sqrt((sum(args) / float(len(args))))
+        mvar = (self.acc * self.clevel)/112
+        if (mvar > 0.5):
+            mvar = 0.5
+        if (mvar < -0.5):
+            mvar = -0.5
+        penguin.ymove += mvar
+
+    @make_method("/muse/acc", 'fff')
+    def acc_callback(self, path, args):
+        self.acc = args[0]
+
+    # @make_method("/muse/elements/horseshoe", "ffff")
+    # def good_callback(self, path, args):
+
+try:
+    server = PengServer()
+except ServerError, err:
+    print str(err)
+    sys.exit()
+
+##############################################################
+### Utility functions
+##############################################################
 
 # Create an empty background
 def createEmptySurface(screen, rect):
@@ -216,7 +335,6 @@ def checkPenguinCollisions(penguin, orcaGroup, healthGroup, sealGroup, \
             # Check helipenguin collision with UFO
         collgroup=pygame.sprite.spritecollide(penguin, orcaGroup, sealGroup, pygame.sprite.collide_mask)
         if len(collgroup) > 0:
-            _healthDownSound.play()
             state.penguinHealth=state.penguinHealth-5
             if state.healthCnt<0:
                 state.healthCnt=0
@@ -224,7 +342,6 @@ def checkPenguinCollisions(penguin, orcaGroup, healthGroup, sealGroup, \
         # Check helipenguin collision with nemo
         collgroup=pygame.sprite.spritecollide(penguin, healthGroup, 0)
         if len(collgroup) > 0:
-            _healthSound.play()
             collgroup[0].health=collgroup[0].health-1
             if collgroup[0].health<=0:
                 healthGroup.remove(collgroup[0])
@@ -235,7 +352,6 @@ def checkPenguinCollisions(penguin, orcaGroup, healthGroup, sealGroup, \
         # Check helipenguin collision with poop
         collgroup=pygame.sprite.spritecollide(penguin, poopGroup, 1)
         if len(collgroup) > 0:
-            _healthDownSound.play()
             state.poopCnt=state.poopCnt-1
             state.penguinHealth=state.penguinHealth-50
 
@@ -279,15 +395,12 @@ def addHealth(tile, healthGroup, state, topSpace):
 # Adds randomly enemy poops
 def addPoop(orcaGroup, poopGroup, state):
 
-    global _poopSound
-
     # Iterate over orcas and create poops randomly
     for ndx in range(len(orcaGroup.sprites())):
         orca=orcaGroup.sprites()[ndx]
         if state.poopCnt<state.poopMax:
             poopDeterminator=random.randint(1, state.poopRnd)
             if poopDeterminator<=state.doPoop:
-                _poopSound.play()
                 state.poopCnt=state.poopCnt+1
                 poop=Poop(orca.rect.left+10, orca.rect.top+20, poopGroup, state)
                 poopGroup.add(poop)
@@ -297,7 +410,6 @@ def addOrca(tile, orcaGroup, state, topSpace):
 
     global _backgroundWidth
     global _backgroundHeight
-    global _enemySound
 
     state.lastOrcaCnt=state.lastOrcaCnt+1
     doAdd=random.randint(1, 30)
@@ -311,7 +423,6 @@ def addOrca(tile, orcaGroup, state, topSpace):
                 ymove=-random.randint(1,state.maxYDelta)
                 position=_backgroundHeight-tile.btm_tileHeight-random.randint(20, 30)
 
-            _enemySound.play()
             orca=Orca(_backgroundWidth-50, position-ymove, orcaGroup, state)
             orca.ymove=ymove
             orcaGroup.add(orca)
@@ -323,7 +434,6 @@ def addSeal(tile, sealGroup, state, topSpace):
 
     global _backgroundWidth
     global _backgroundHeight
-    global _enemySound
 
     state.lastSealCnt=state.lastSealCnt+1
     doAdd=random.randint(1, 1000)
@@ -337,7 +447,6 @@ def addSeal(tile, sealGroup, state, topSpace):
                 ymove=-random.randint(1,state.maxYDelta)
                 position=_backgroundHeight-tile.btm_tileHeight-random.randint(20, 30)
 
-            _enemySound.play()
             seal=Seal(_backgroundWidth-50, position-ymove, sealGroup, state)
             seal.ymove=ymove
             sealGroup.add(seal)
@@ -356,8 +465,7 @@ def addText(text, background, xpos, ypos, \
     if center == True:
         xpos = background.get_width()/2 - textpos.width/2
     cleanrec=(xpos-1, ypos-1, textpos.width, textpos.height)
-    if bgcolor!=None:
-        background.fill(bgcolor, cleanrec);
+    # background.fill(bgcolor, cleanrec);
     background.blit(text, (xpos, ypos));
 
 # Update game information on top of the screen
@@ -722,102 +830,6 @@ class SpriteExplosion():
         self.tileWidth=toExplode.get_rect().width/self.xtiles
         self.tileHeigh=toExplode.get_rect().height/self.ytiles
 
-# Player's helipenguin
-class Penguin(pygame.sprite.Sprite):
-
-    # Init helipenguin instance
-    def __init__(self, xpos=50, ypos=280, state=None):
-
-        global _penguinImage
-        pygame.sprite.Sprite.__init__(self) #call Sprite initializer
-        self.image, self.rect=_penguinImage
-        self.imageNormal=self.image
-        self.image=pygame.transform.rotate(self.image, 20)
-        # self.imageForward=pygame.transform.rotate(self.image, -10)
-        self.rect.top=ypos
-        self.rect.left=xpos
-        self.xmove=0
-        self.ymove=0
-        self.xdelta=2
-        self.ydelta=2
-        self.xpos=xpos
-        self.ypos=ypos
-        self.state=state
-        self.area = pygame.display.get_surface().get_rect()
-
-    # Update helipenguin settings
-    def update(self):
-
-        # Drop penguin if no health left
-        if self.state.penguinHealth<=0:
-            self.ymove=2
-            # reset health to 0 if negative value
-            self.state.penguinHealth=0
-        
-
-        # Adjust helipenguin position
-        newpos = self.rect.move((self.xmove, self.ymove))
-        if newpos.left<=0:
-            newpos.left=0
-        elif newpos.left+newpos.width>=800:
-            newpos.left=newpos.left-self.xdelta
-
-        self.rect = newpos
-
-    # Helipenguin has collided with background
-    def collidedBackground(self):
-
-        self.kill()
-        print ">>>> collided"
-
-# Player's helipenguin
-class StateData():
-
-    # Initialize state data instance
-    def __init__(self):
-
-        # Orca create parameter
-        self.orcaMax=2
-        self.orcaCnt=0
-        self.lastOrcaCnt=-200
-        self.doOrcaCnt=50
-        self.maxYDelta=1
-
-        # Seal create parameter
-        self.sealMax=1
-        self.sealCnt=0
-        self.lastSealCnt=-200
-        self.doSealCnt=50
-        self.maxYDelta=1
-
-        # Poop create parameter
-        self.poopMax=3
-        self.poopCnt=0
-        self.poopRnd=1000
-        self.lastPoopCnt=0
-        self.doPoop=25
-
-        # Health create parameter
-        self.healthMax=4
-        self.healthCnt=0
-        self.lastHealthCnt=-600
-        self.doHealthCnt=500
-
-
-        # Penguin state
-        self.penguinHealth=1000
-        self.penguinScore=0
-
-
-        # Level parameter
-        self.sectorColors=['skyblue', 'skyblue', 'lightblue', 'lightblue',
-                          'skyblue', 'skyblue', 'lightblue', 'lightblue']
-        self.sectorColorCnt=0
-        self.sectorColor=self.sectorColors[self.sectorColorCnt]
-        self.sector=1
-        self.sectorCnt=0
-        self.nextSectorCnt=2500
-
     # Adjusts state data to next sector
     def nextSector(self, tile):
 
@@ -845,7 +857,6 @@ class StateData():
             if self.sector == 3 or self.sector == 5:
                 self.maxYDelta=self.maxYDelta+1
 
-
 #############################################################
 ### Main functions
 #############################################################
@@ -855,9 +866,6 @@ def doEntryLoop(screen,background):
 
     global _backgroundWidth
     global _titleImage
-    global _highScore
-    global _bgImage
-
 
     # Draw static background
     tile=CaveTile()
@@ -865,14 +873,18 @@ def doEntryLoop(screen,background):
     for x in range(_backgroundWidth):
         cave=tile.fetchTile()
         background.blit(cave, (x,tile.topSpace))
-    addText("Highscore: " + str(_highScore), background, 310, 300, \
-            THECOLORS['lightgreen'], THECOLORS['black'], 20, True)
-    addText("[SPACE] to continue", background, 310, 560, \
-            THECOLORS['black'], THECOLORS['skyblue'], 20, True)
-
-    background.blit(_titleImage[0], (130,50))
+    addText("[SPACE] to continue", background, 310, 555, \
+            THECOLORS['black'], THECOLORS['lightblue'], 20, True)
+    addText("Pennjamin's Travels", background, 310, 405, \
+            THECOLORS['white'], THECOLORS['lightblue'], 48, True)
+    picture = _titleImage[0]
+    picture = pygame.transform.smoothscale(picture, (300,300))
+    picture = pygame.transform.rotate(picture, 90)
+    background.blit(picture, (255,80))
     screen.blit(background, (0,0))
     pygame.display.flip()
+
+    state.resetHealthAndScore()
 
     doLoop=True
     clock=pygame.time.Clock()
@@ -882,10 +894,12 @@ def doEntryLoop(screen,background):
         # Catch input event
         for event in pygame.event.get():
             if event.type == QUIT:
-                sys.exit(0)
-            elif event.type == KEYDOWN:
+                close()
+            if event.type == KEYDOWN:
                 if event.key == 32:
                     doLoop=False
+                    penguin = Penguin(275, 280, state)
+                    server.start()
 
 
     tile.topSpace=40
@@ -898,25 +912,13 @@ def doEntryLoop(screen,background):
     return tile
 
 # Process main game loop
-def doMainLoop(screen,background, tile):
-
-    global _heliSound
-    global _healthSound
-    global _healthDownSound
-    global _enemyKillSound
-    global _orcaKillImage
-    global _bgImage
-
-    _heliSound.play()
-
-
-    # Game state data
-    state=StateData()
+def doMainLoop(screen, background, tile):
+    global penguin
+    penguin = Penguin(275, 280, state)
 
     # Create helipenguin
     penguin=Penguin(275, 280, state)
     
-
     # Create sprite groups
     penguinGroup = pygame.sprite.RenderPlain((penguin))
     orcaGroup = pygame.sprite.RenderPlain()
@@ -929,32 +931,32 @@ def doMainLoop(screen,background, tile):
     clock=pygame.time.Clock()
     delta=1
     doContinue=True
-    topSpace=40
+    topSpace=30
     healthReductionCnt=0
+
     while doContinue:
         clock.tick(100) # fps
         
         # Catch input event
         for event in pygame.event.get():
             if event.type == QUIT:
-                return
-            elif event.type == KEYDOWN:
+                close()
+            if event.type == KEYDOWN:
                 if event.key == 273: # up
                     penguin.ymove=-penguin.ydelta
                 if event.key == 274: # down
                     penguin.ymove=penguin.ydelta
                 if event.key == K_ESCAPE: # esc
-                    quit();
+                    quit()
             elif event.type == KEYUP:
                 penguin.xmove=0
                 penguin.ymove=0
-                
                 
 
         # Scroll landsape
         tile.color=THECOLORS[state.sectorColor]
         newBackground=scrollLandscape(background, delta, tile, topSpace)
-        background.blit(_bgImage[0], (0,0))
+        # background.blit(_bgImage[0], (0,0))
         background.blit(newBackground, (0,0))
 
         # Add objects to sprite groups
@@ -983,8 +985,6 @@ def doMainLoop(screen,background, tile):
             healthReductionCnt=0
             state.penguinScore=state.penguinScore+1
 
-        
-
         # Update sprites
         penguinGroup.update()
         poopGroup.update()
@@ -1010,10 +1010,9 @@ def doMainLoop(screen,background, tile):
     explodeGroup=explodeSprite(penguin,10, 4)
     penguinGroup.remove(penguin)
 
-    global _penguinKillSound
     cnt=0
-    _penguinKillSound.play()
-    while cnt<100:
+
+    while cnt<25:
 
         clock.tick(100) # fps
         cnt=cnt+1
@@ -1032,13 +1031,6 @@ def doMainLoop(screen,background, tile):
         pygame.display.flip()
         pygame.time.wait(25)
 
-    # New highscore?
-    global _highScore
-    if state.penguinScore > _highScore:
-        _highScore=state.penguinScore
-        addText("New Highscore!", background, 270, 330, \
-                THECOLORS['lightgreen'], (0,0,0), 30, True)
-    # Show GAME OVER
     addText("GAME OVER", background, 270, 270, \
             THECOLORS['lightgreen'], cavebackground, 50, True)
     addText("[SPACE] to continue", background, 310, 560, \
@@ -1053,29 +1045,23 @@ def doMainLoop(screen,background, tile):
         # Catch input event
         for event in pygame.event.get():
             if event.type == QUIT:
+                server.stop()
                 sys.exit(0)
             elif event.type == KEYDOWN:
                 if event.key == 32:
                     doLoop=False
+                elif event.key == K_ESCAPE:
+                    server.stop()
+                    sys.exit(0)
 
 
 # Entrypoint
 def main():
-
     
     # Main window dimension
     global backgroundWidth
     mainWindowWidth=_backgroundWidth
     mainWindowHeight=_backgroundHeight
-
-    # Initialize window
-    screen=initWindow(mainWindowWidth, mainWindowHeight)
-
-    # Load images for sprites
-    loadImages()
-
-    # Load sounds
-    loadSounds()
 
     # Create empty background
     background=createEmptySurface(screen, screen.get_size())
@@ -1086,6 +1072,7 @@ def main():
 
         # Enter main loop
         doMainLoop(screen, background, caveTile)
+
 
 #this calls the 'main' function when this script is executed
 if __name__ == '__main__': main()
