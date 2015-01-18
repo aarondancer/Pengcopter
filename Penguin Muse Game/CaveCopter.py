@@ -40,7 +40,7 @@ global _ufoShotImage
 global _fuelImage
 global _mineImage
 global _titleImage
-global _bgImage
+# global _bgImage
 _copterImage=loadImage('res/penguinlg.png')
 _ufoImage=loadImage('res/orca.png')
 _ufoKillImage=loadImage('res/enemyUFOKill.png')
@@ -215,9 +215,8 @@ class PengServer(ServerThread):
     def acc_callback(self, path, args):
         self.acc = args[0]
 
-    @make_method("/muse/elements/horseshoe", "ffff")
-    def good_callback(self, path, args):
-        
+    # @make_method("/muse/elements/horseshoe", "ffff")
+    # def good_callback(self, path, args):
 
 try:
     server = PengServer()
@@ -452,7 +451,6 @@ def updateCopterInfo(background, state):
     addText("Sector: " + str(state.sector), background, 210, 3, THECOLORS[state.sectorColor], (0,0,0), 20)
     addText("Score: " + str(state.copterScore), background, 410, 3, THECOLORS['cyan'], (0,0,0), 20)
     
-
 # Explodes sprite into several fragments returned in a sprite group
 def explodeSprite(toExplode=None, xtiles=0, ytiles=0):
 
@@ -785,8 +783,6 @@ def doEntryLoop(screen,background):
     global _backgroundWidth
     global _titleImage
     global _highScore
-    global _bgImage
-
 
     # Draw static background
     tile=CaveTile()
@@ -883,7 +879,7 @@ def doMainLoop(screen, background, tile):
         # Scroll landsape
         tile.color=THECOLORS[state.sectorColor]
         newBackground=scrollLandscape(background, delta, tile, topSpace)
-        background.blit(_bgImage[0], (0,0))
+        # background.blit(_bgImage[0], (0,0))
         background.blit(newBackground, (0,0))
 
         # Add objects to sprite groups
