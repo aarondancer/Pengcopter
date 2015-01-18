@@ -803,7 +803,7 @@ class StateData():
 
 
         # Penguin state
-        self.penguinFuel=5000
+        self.penguinFuel=1000
         self.penguinScore=0
 
 
