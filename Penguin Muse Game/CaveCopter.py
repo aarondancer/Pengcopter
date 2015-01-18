@@ -897,6 +897,10 @@ def doEntryLoop(screen,background):
             THECOLORS['black'], THECOLORS['lightblue'], 20, True)
     addText("Pennjamin's Travels", background, 310, 405, \
             THECOLORS['white'], THECOLORS['lightblue'], 48, True)
+    addText("LE", background, 600, 3, THECOLORS['green'] if LE <= 2 else THECOLORS['red'], (0,0,0), 20)
+    addText("LF", background, 640, 3, THECOLORS['green'] if LF <= 2 else THECOLORS['red'], (0,0,0), 20)
+    addText("RF", background, 680, 3, THECOLORS['green'] if RF <= 2 else THECOLORS['red'], (0,0,0), 20)
+    addText("RE", background, 720, 3, THECOLORS['green'] if RE <= 2 else THECOLORS['red'], (0,0,0), 20)
     picture = _titleImage[0]
     picture = pygame.transform.smoothscale(picture, (300,300))
     picture = pygame.transform.rotate(picture, 90)
