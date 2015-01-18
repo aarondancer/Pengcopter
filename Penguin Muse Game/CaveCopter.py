@@ -56,6 +56,10 @@ global _orcaImage
 global _poopImage
 global _sealImage
 global _healthImage
+global LE
+global LF
+global RF
+global RE
 # global _bgImage
 _penguinImage=loadImage('res/pennapps.png')
 _ufoImage=loadImage('res/orca.png')
@@ -66,6 +70,10 @@ _orcaImage=loadImage('res/orca.png')
 _poopImage=loadImage('res/emoji_poop.png')
 _sealImage=loadImage('res/seal.png')
 _healthImage=loadImage('res/nemo.png')
+LE = 4.0
+LF = 4.0
+RF = 4.0
+RE = 4.0
 
 # Cave BackgroundColor
 cavebackground = (52, 73,94)
@@ -237,8 +245,16 @@ class PengServer(ServerThread):
     def acc_callback(self, path, args):
         self.acc = args[0]
 
-    # @make_method("/muse/elements/horseshoe", "ffff")
-    # def good_callback(self, path, args):
+    @make_method("/muse/elements/horseshoe", "ffff")
+    def good_callback(self, path, args):
+        global LE
+        global LF
+        global RF
+        global RE
+        LE = args[0]
+        LF = args[1]
+        RF = args[2]
+        RE = args[3]
 
 try:
     server = PengServer()
@@ -474,6 +490,10 @@ def updatePenguinInfo(background, state):
     addText("Health: " + str(state.penguinHealth), background, 15, 3, THECOLORS['lightgrey'], (0,0,0), 20)
     addText("Sector: " + str(state.sector), background, 210, 3, THECOLORS[state.sectorColor], (0,0,0), 20)
     addText("Score: " + str(int ((10 * (round (time2 - time1, 1)))/2)), background, 440, 3, THECOLORS['cyan'], (0,0,0), 20)
+    addText("LE", background, 600, 3, THECOLORS['green'] if LE <= 2 else THECOLORS['red'], (0,0,0), 20)
+    addText("LF", background, 640, 3, THECOLORS['green'] if LF <= 2 else THECOLORS['red'], (0,0,0), 20)
+    addText("RF", background, 680, 3, THECOLORS['green'] if RF <= 2 else THECOLORS['red'], (0,0,0), 20)
+    addText("RE", background, 720, 3, THECOLORS['green'] if RE <= 2 else THECOLORS['red'], (0,0,0), 20)
 
 # Explodes sprite into several fragments returned in a sprite group
 def explodeSprite(toExplode=None, xtiles=0, ytiles=0):
