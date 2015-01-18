@@ -46,11 +46,8 @@ _ufoImage=loadImage('res/orca.png')
 _ufoKillImage=loadImage('res/enemyUFOKill.png')
 _ufoShotImage=loadImage('res/ufoShot.png')
 _fuelImage=loadImage('res/nemo.png')
-_rocketImage=loadImage('res//rocket.png')
-_ammoImage=loadImage('res/ammo.png',)
 _mineImage=loadImage('res/emoji_poop.png')
 _titleImage=loadImage('res/penguinlg.png')
-_bgImage = loadImage('res/bg.jpg')
 
 # High score
 _highScore=0
@@ -213,12 +210,14 @@ class PengServer(ServerThread):
     def concentration_callback(self, path, args):
         self.clevel = 1 - sqrt((sum(args) / float(len(args))))
         copter.ymove += (self.acc * self.clevel)/112
-        # print (self.acc)/128
 
     @make_method("/muse/acc", 'fff')
     def acc_callback(self, path, args):
         self.acc = args[0]
-        # print self.hacc
+
+    @make_method("/muse/elements/horseshoe", "ffff")
+    def good_callback(self, path, args):
+        
 
 try:
     server = PengServer()
