@@ -1,44 +1,20 @@
 #Import Modules
-import sys, os, pygame, random
-import pygame.gfxdraw
-import pygame.surface
-import pygame.color
-import pygame.mixer
-from pygame.locals import *
+import sys, os, pygame, random, time, pygame.gfxdraw
+from pygame import *
+from pygame.transform import *
 from pygame.color import *
-
-# images
-_copterImage=None
-_ufoImage=None
-_ufoKillImage=None
-_ufoShotImage=None
-_fuelImage=None
-_mineImage=None
-_titleImage=None
-
-# sounds
-_heliSound=None
-_missleSound=None
-_enemySound=None
-_enemyKillSound=None
-_fuelSound=None
-_fuelDownSound=None
-_mineSound=None
-_copterKillSound=None
+from liblo import *
+from math import sqrt
 
 # screen dimensions
 _backgroundWidth=800
 _backgroundHeight=600
 
-# High score
-_highScore=0
-
-# Cave BackgroundColor
-cavebackground = (52, 73,94)
-
-##############################################################
-### Utility functions
-##############################################################
+pygame.init()
+global screen
+screen = pygame.display.set_mode((_backgroundWidth, _backgroundHeight))#, pygame.FULLSCREEN)
+pygame.display.set_caption('Penguin Muse')
+pygame.mouse.set_visible(1)
 
 # load image
 def loadImage(name, colorkey=None):
@@ -49,98 +25,210 @@ def loadImage(name, colorkey=None):
     except pygame.error, message:
         print 'Cannot load image:', fullname
         raise SystemExit(message)
-    image = image.convert()
+    image = image.convert_alpha()
     if colorkey is not None:
         if colorkey is -1:
             colorkey = image.get_at((0,0))
         image.set_colorkey(colorkey, RLEACCEL)
     return image, image.get_rect()
 
-# preload images
-def loadImages():
+# images
+global _copterImage
+global _ufoImage
+global _ufoKillImage
+global _ufoShotImage
+global _fuelImage
+global _mineImage
+global _titleImage
+global _bgImage
+_copterImage=loadImage('res/penguinlg.png')
+_ufoImage=loadImage('res/orca.png')
+_ufoKillImage=loadImage('res/enemyUFOKill.png')
+_ufoShotImage=loadImage('res/ufoShot.png')
+_fuelImage=loadImage('res/nemo.png')
+_rocketImage=loadImage('res//rocket.png')
+_ammoImage=loadImage('res/ammo.png',)
+_mineImage=loadImage('res/emoji_poop.png')
+_titleImage=loadImage('res/penguinlg.png')
+_bgImage = loadImage('res/bg.jpg')
 
-    global _copterImage
-    global _ufoImage
-    global _ufoKillImage
-    global _ufoShotImage
-    global _fuelImage
-    global _mineImage
-    global _titleImage
-    global _bgImage
-#
-# <<<<<<< HEAD
-#     _copterImage=loadImage('res\\penguin.png', (255,255,255))
-#     _ufoImage=loadImage('res\\orca.png', (0,0,0))
-#     _ufoKillImage=loadImage('res\\enemyUFOKill.png', (0,0,0))
-#     _ufoShotImage=loadImage('res\\ufoShot.png', (0,0,0))
-#     _fuelImage=loadImage('res\\nemo.png', (0,0,0))
-#     _mineImage=loadImage('res\\emoji_poop.png', (0,0,0))
-#     _titleImage=loadImage('res\\penguinlg.png',  (255,255,255))
-#     _bgImage = loadImage('res\\bg.jpg', (0,0,0))
-# =======
-    _copterImage=loadImage('res/penguin.png', (255,255,255))
-    _ufoImage=loadImage('res/orca.png', (0,0,0))
-    _ufoKillImage=loadImage('res/enemyUFOKill.png', (0,0,0))
-    _ufoShotImage=loadImage('res/ufoShot.png', (0,0,0))
-    _fuelImage=loadImage('res/nemo.png', (0,0,0))
-    _rocketImage=loadImage('res//rocket.png', (0,0,0))
-    _ammoImage=loadImage('res/ammo.png', (0,0,0))
-    _mineImage=loadImage('res/emoji_poop.png', (0,0,0))
-    _titleImage=loadImage('res/penguinlg.png',  (255,255,255))
-    _bgImage = loadImage('res/bg.jpg', (0,0,0))
-# >>>>>>> db8905276cb1afa1b743ac2f9c77803c5f4260ed
+# High score
+_highScore=0
 
-# load sound
-def loadSound(name):
+# Cave BackgroundColor
+cavebackground = (52, 73,94)
 
-    class NoneSound:
-        def play(self): pass
-    if not pygame.mixer or not pygame.mixer.get_init():
-        return NoneSound()
-    fullname = name
-    try:
-        sound = pygame.mixer.Sound(fullname)
-    except pygame.error, message:
-        print 'Cannot load sound:', fullname
-        raise SystemExit, message
-    return sound
+def close():
+    server.stop()
+    pygame.quit()
+    sys.exit()
 
-# preload sounds
-def loadSounds():
 
-    global _heliSound
-    global _missleSound
-    global _enemySound
-    global _enemyKillSound
-    global _fuelSound
-    global _fuelDownSound
-    global _mineSound
-    global _copterKillSound
+# Player's helicopter
+class StateData():
 
-    _heliSound=loadSound('res\\heli.wav')
-    _missleSound=loadSound('res\\missle.wav')
-    _enemySound=loadSound('res\\enemy.wav')
-    _enemyKillSound=loadSound('res\\enemyKill.wav')
-    _fuelSound=loadSound('res\\fuel.wav')
-    _fuelDownSound=loadSound('res\\fuelDown.wav')
-    _mineSound=loadSound('res\\mine.wav')
-    _copterKillSound=loadSound('res\\copterKill.wav')
+    # Initialize state data instance
+    def __init__(self):
 
-    _enemyKillSound.set_volume(0.5)
-    _heliSound.set_volume(0.5)
-    _fuelDownSound.set_volume(0.2)
-    _fuelSound.set_volume(0.05)
-    _mineSound.set_volume(0.1)
-    _copterKillSound.set_volume(0.5)
+        # Ufo create parameter
+        self.ufoMax=1
+        self.ufoCnt=0
+        self.lastUfoCnt=-200
+        self.doUfoCnt=50
+        self.maxYDelta=1
 
-# Initialize the game window
-def initWindow(width, height):
+        # Ufo shot create parameter
+        self.ufoShotMax=1
+        self.ufoShotCnt=0
+        self.ufoShotRnd=1000
+        self.doUfoShot=25
 
-    pygame.init()
-    screen = pygame.display.set_mode((width, height))
-    pygame.display.set_caption('Penguin Muse')
-    pygame.mouse.set_visible(1)
-    return screen
+        # Mine create parameter
+        self.mineMax=5
+        self.mineCnt=0
+        self.mineRnd=1000
+        self.lastMineCnt=0
+        self.doMine=25
+
+        # Fuel create parameter
+        self.fuelMax=1
+        self.fuelCnt=0
+        self.lastFuelCnt=-600
+        self.doFuelCnt=500
+
+
+        # Copter state
+        self.copterFuel=5000
+        self.copterScore=0
+
+
+        # Level parameter
+        self.sectorColors=['skyblue', 'skyblue', 'lightblue', 'lightblue',
+                          'skyblue', 'skyblue', 'lightblue', 'lightblue']
+        self.sectorColorCnt=0
+        self.sectorColor=self.sectorColors[self.sectorColorCnt]
+        self.sector=1
+        self.sectorCnt=0
+        self.nextSectorCnt=2500
+
+    # Adjusts state data to next sector
+    def nextSector(self, tile):
+
+        # Check if new sector reached
+        self.sectorCnt=self.sectorCnt+1
+        if self.sectorCnt >= self.nextSectorCnt:
+            self.sector=self.sector+1
+            self.sectorCnt=0
+
+            # Set new cave color for sector
+            self.sectorColorCnt=self.sectorColorCnt+1
+            if self.sectorColorCnt >= len(self.sectorColors):
+                self.sectorColorCnt=0
+            self.sectorColor=self.sectorColors[self.sectorColorCnt]
+
+            # Increase game difficulty
+            if self.sector%4 == 0:
+                self.mineMax=self.mineMax+1
+            elif self.sector%3 == 0:
+                self.ufoMax=self.ufoMax+1
+            elif self.sector%2 == 0:
+                self.ufoShotMax=self.ufoShotMax+1
+
+            if tile.minSpace>100:
+                tile.minSpace=tile.minSpace-25
+
+            if self.sector == 3 or self.sector == 5:
+                self.maxYDelta=self.maxYDelta+1
+
+# Game state data
+global state
+state = StateData()
+
+# Player's helicopter
+class Copter(pygame.sprite.Sprite):
+
+    # Init helicopter instance
+    def __init__(self, xpos=50, ypos=280, state=None):
+
+        global _copterImage
+        pygame.sprite.Sprite.__init__(self) #call Sprite initializer
+        picture = _copterImage[0]
+        picture = pygame.transform.smoothscale(picture, (40,40))
+        self.image= picture
+        self.rect= picture.get_rect()
+        self.imageNormal=self.image
+        self.image=pygame.transform.rotate(self.image, 10)
+        self.imageForward=pygame.transform.rotate(self.image, -10)
+        self.rect.top=ypos
+        self.rect.left=xpos
+        self.xmove=0
+        self.ymove=0
+        self.xdelta=0
+        self.ydelta=0
+        self.xpos=xpos
+        self.ypos=ypos
+        self.state=state
+        self.area = pygame.display.get_surface().get_rect()
+
+    # Update helicopter settings
+    def update(self):
+
+        # Drop copter if no fuel left
+        if self.state.copterFuel<=0:
+            self.ymove=2
+
+        self.image=self.imageNormal
+
+        # Adjust helicopter position
+        newpos = self.rect.move((self.xmove, self.ymove))
+        if newpos.left<=0:
+            newpos.left=0
+        elif newpos.left+newpos.width>=800:
+            newpos.left=newpos.left-self.xdelta
+
+        self.rect = newpos
+
+    # Helicopter has collided with background
+    def collidedBackground(self):
+        self.kill()
+        print ">>>> collided"
+
+global copter
+copter = Copter(275, 280, state)
+
+class PengServer(ServerThread):
+
+    def __init__(self):
+        ServerThread.__init__(self, 5001)
+
+    global acc
+    global clevel
+    clevel = 0.0
+    acc = 0.0
+
+    def printAcc(self):
+        print self.acc
+
+    @make_method("/muse/elements/experimental/concentration", 'f')
+    def concentration_callback(self, path, args):
+        self.clevel = 1 - sqrt((sum(args) / float(len(args))))
+        copter.ymove += (self.acc * self.clevel)/112
+        # print (self.acc)/128
+
+    @make_method("/muse/acc", 'fff')
+    def acc_callback(self, path, args):
+        self.acc = args[0]
+        # print self.hacc
+
+try:
+    server = PengServer()
+except ServerError, err:
+    print str(err)
+    sys.exit()
+
+##############################################################
+### Utility functions
+##############################################################
 
 # Create an empty background
 def createEmptySurface(screen, rect):
@@ -207,7 +295,6 @@ def checkCopterCollisions(copter, ufoGroup, fuelGroup, \
             # Check helicopter collision with UFO
         collgroup=pygame.sprite.spritecollide(copter, ufoGroup, 0, pygame.sprite.collide_mask)
         if len(collgroup) > 0:
-            _fuelDownSound.play()
             state.copterFuel=state.copterFuel-5
             if state.fuelCnt<0:
                 state.fuelCnt=0
@@ -215,7 +302,6 @@ def checkCopterCollisions(copter, ufoGroup, fuelGroup, \
         # Check helicopter collision with fuel tank
         collgroup=pygame.sprite.spritecollide(copter, fuelGroup, 0)
         if len(collgroup) > 0:
-            _fuelSound.play()
             collgroup[0].fuel=collgroup[0].fuel-1
             if collgroup[0].fuel<=0:
                 fuelGroup.remove(collgroup[0])
@@ -223,23 +309,15 @@ def checkCopterCollisions(copter, ufoGroup, fuelGroup, \
                 state.lastFuelCnt=0
             state.copterFuel=state.copterFuel+1
 
-        # Check helicopter collision with ammo
-        # collgroup=pygame.sprite.spritecollide(copter, ammoGroup, 1)
-        # if len(collgroup) > 0:
-         #   _ammoSound.play()
-         #   state.ammoCnt=0
-
         # Check helicopter collision with mine
         collgroup=pygame.sprite.spritecollide(copter, mineGroup, 1)
         if len(collgroup) > 0:
-            _fuelDownSound.play()
             state.mineCnt=state.mineCnt-1
             state.copterFuel=state.copterFuel-50
 
         # Check helicopter collision with ufo shot
         collgroup=pygame.sprite.spritecollide(copter, ufoShotGroup, 1)
         if len(collgroup) > 0:
-            _fuelDownSound.play()
             state.ufoShotCnt=state.ufoShotCnt-1
             state.copterFuel=state.copterFuel-50
 
@@ -290,15 +368,12 @@ def addFuel(tile, fuelGroup, state, topSpace):
 # Adds randomly enemy mines
 def addMine(ufoGroup, mineGroup, state):
 
-    global _mineSound
-
     # Iterate over ufos and create mines randomly
     for ndx in range(len(ufoGroup.sprites())):
         ufo=ufoGroup.sprites()[ndx]
         if state.mineCnt<state.mineMax:
             mineDeterminator=random.randint(1, state.mineRnd)
             if mineDeterminator<=state.doMine:
-                _mineSound.play()
                 state.mineCnt=state.mineCnt+1
                 mine=Mine(ufo.rect.left+10, ufo.rect.top+20, mineGroup, state)
                 mineGroup.add(mine)
@@ -307,15 +382,12 @@ def addMine(ufoGroup, mineGroup, state):
 # Adds randomly ufo shots
 def addUfoShot(copter, ufoGroup, ufoShotGroup, state):
 
-    global _mineSound
-
     # Iterate over ufos and create mines randomly
     for ndx in range(len(ufoGroup.sprites())):
         ufo=ufoGroup.sprites()[ndx]
         if state.ufoShotCnt<state.ufoShotMax:
             shotDeterminator=random.randint(1, state.ufoShotRnd)
             if shotDeterminator<=state.doUfoShot:
-                _mineSound.play()
                 state.ufoShotCnt=state.ufoShotCnt+1
                 xdist=ufo.rect.left-copter.rect.left
                 ydist=ufo.rect.top-copter.rect.top
@@ -340,7 +412,6 @@ def addUfo(tile, ufoGroup, state, topSpace):
 
     global _backgroundWidth
     global _backgroundHeight
-    global _enemySound
 
     state.lastUfoCnt=state.lastUfoCnt+1
     doAdd=random.randint(1, 30)
@@ -354,7 +425,6 @@ def addUfo(tile, ufoGroup, state, topSpace):
                 ymove=-random.randint(1,state.maxYDelta)
                 position=_backgroundHeight-tile.btm_tileHeight-random.randint(20, 30)
 
-            _enemySound.play()
             ufo=Ufo(_backgroundWidth-50, position-ymove, ufoGroup, state)
             ufo.ymove=ymove
             ufoGroup.add(ufo)
@@ -373,8 +443,7 @@ def addText(text, background, xpos, ypos, \
     if center == True:
         xpos = background.get_width()/2 - textpos.width/2
     cleanrec=(xpos-1, ypos-1, textpos.width, textpos.height)
-    if bgcolor!=None:
-        background.fill(bgcolor, cleanrec);
+    # background.fill(bgcolor, cleanrec);
     background.blit(text, (xpos, ypos));
 
 # Update game information on top of the screen
@@ -382,7 +451,8 @@ def updateCopterInfo(background, state):
 
     addText("Health: " + str(state.copterFuel), background, 15, 3, THECOLORS['lightgrey'], (0,0,0), 20)
     addText("Sector: " + str(state.sector), background, 210, 3, THECOLORS[state.sectorColor], (0,0,0), 20)
-    addText("Score: " + str(state.copterScore), background, 440, 3, THECOLORS['cyan'], (0,0,0), 20)
+    addText("Score: " + str(state.copterScore), background, 410, 3, THECOLORS['cyan'], (0,0,0), 20)
+    
 
 # Explodes sprite into several fragments returned in a sprite group
 def explodeSprite(toExplode=None, xtiles=0, ytiles=0):
@@ -706,136 +776,6 @@ class SpriteExplosion():
         self.tileWidth=toExplode.get_rect().width/self.xtiles
         self.tileHeigh=toExplode.get_rect().height/self.ytiles
 
-# Player's helicopter
-class Copter(pygame.sprite.Sprite):
-
-    # Init helicopter instance
-    def __init__(self, xpos=50, ypos=280, state=None):
-
-        global _copterImage
-        pygame.sprite.Sprite.__init__(self) #call Sprite initializer
-        self.image, self.rect=_copterImage
-        self.imageNormal=self.image
-        self.image=pygame.transform.rotate(self.image, 10)
-        self.imageForward=pygame.transform.rotate(self.image, -10)
-        self.rect.top=ypos
-        self.rect.left=xpos
-        self.xmove=0
-        self.ymove=0
-        self.xdelta=2
-        self.ydelta=2
-        self.xpos=xpos
-        self.ypos=ypos
-        self.state=state
-        self.area = pygame.display.get_surface().get_rect()
-
-    # Update helicopter settings
-    def update(self):
-
-        # Drop copter if no fuel left
-        if self.state.copterFuel<=0:
-            self.ymove=2
-
-        # Set helicopter angle
-        if self.xmove < 0:
-            self.image=self.imageBackward
-        elif self.xmove > 0:
-            self.image=self.imageForward
-        else:
-            self.image=self.imageNormal
-
-        # Adjust helicopter position
-        newpos = self.rect.move((self.xmove, self.ymove))
-        if newpos.left<=0:
-            newpos.left=0
-        elif newpos.left+newpos.width>=800:
-            newpos.left=newpos.left-self.xdelta
-
-        self.rect = newpos
-
-    # Helicopter has collided with background
-    def collidedBackground(self):
-
-        self.kill()
-        print ">>>> collided"
-
-# Player's helicopter
-class StateData():
-
-    # Initialize state data instance
-    def __init__(self):
-
-        # Ufo create parameter
-        self.ufoMax=1
-        self.ufoCnt=0
-        self.lastUfoCnt=-200
-        self.doUfoCnt=50
-        self.maxYDelta=1
-
-        # Ufo shot create parameter
-        self.ufoShotMax=1
-        self.ufoShotCnt=0
-        self.ufoShotRnd=1000
-        self.doUfoShot=25
-
-        # Mine create parameter
-        self.mineMax=5
-        self.mineCnt=0
-        self.mineRnd=1000
-        self.lastMineCnt=0
-        self.doMine=25
-
-        # Fuel create parameter
-        self.fuelMax=1
-        self.fuelCnt=0
-        self.lastFuelCnt=-600
-        self.doFuelCnt=500
-
-
-        # Copter state
-        self.copterFuel=5000
-        self.copterScore=0
-
-
-        # Level parameter
-        self.sectorColors=['skyblue', 'skyblue', 'lightblue', 'lightblue',
-                          'skyblue', 'skyblue', 'lightblue', 'lightblue']
-        self.sectorColorCnt=0
-        self.sectorColor=self.sectorColors[self.sectorColorCnt]
-        self.sector=1
-        self.sectorCnt=0
-        self.nextSectorCnt=2500
-
-    # Adjusts state data to next sector
-    def nextSector(self, tile):
-
-        # Check if new sector reached
-        self.sectorCnt=self.sectorCnt+1
-        if self.sectorCnt >= self.nextSectorCnt:
-            self.sector=self.sector+1
-            self.sectorCnt=0
-
-            # Set new cave color for sector
-            self.sectorColorCnt=self.sectorColorCnt+1
-            if self.sectorColorCnt >= len(self.sectorColors):
-                self.sectorColorCnt=0
-            self.sectorColor=self.sectorColors[self.sectorColorCnt]
-
-            # Increase game difficulty
-            if self.sector%4 == 0:
-                self.mineMax=self.mineMax+1
-            elif self.sector%3 == 0:
-                self.ufoMax=self.ufoMax+1
-            elif self.sector%2 == 0:
-                self.ufoShotMax=self.ufoShotMax+1
-
-            if tile.minSpace>100:
-                tile.minSpace=tile.minSpace-25
-
-            if self.sector == 3 or self.sector == 5:
-                self.maxYDelta=self.maxYDelta+1
-
-
 #############################################################
 ### Main functions
 #############################################################
@@ -855,12 +795,15 @@ def doEntryLoop(screen,background):
     for x in range(_backgroundWidth):
         cave=tile.fetchTile()
         background.blit(cave, (x,tile.topSpace))
-    addText("Highscore: " + str(_highScore), background, 310, 300, \
-            THECOLORS['lightgreen'], THECOLORS['black'], 20, True)
-    addText("[SPACE] to continue", background, 310, 560, \
+    addText("Highscore: " + str(_highScore), background, 310, 30, \
+            THECOLORS['white'], THECOLORS['black'], 20, True)
+    addText("[SPACE] to continue", background, 310, 555, \
             THECOLORS['black'], THECOLORS['lightblue'], 20, True)
-
-    background.blit(_titleImage[0], (130,50))
+    addText("Pennjamin's Travels", background, 310, 405, \
+            THECOLORS['white'], THECOLORS['lightblue'], 48, True)
+    picture = _titleImage[0]
+    picture = pygame.transform.smoothscale(_titleImage[0], (300,300))
+    background.blit(picture, (255,80))
     screen.blit(background, (0,0))
     pygame.display.flip()
 
@@ -872,10 +815,12 @@ def doEntryLoop(screen,background):
         # Catch input event
         for event in pygame.event.get():
             if event.type == QUIT:
-                sys.exit(0)
-            elif event.type == KEYDOWN:
+                close()
+            if event.type == KEYDOWN:
                 if event.key == 32:
                     doLoop=False
+                    copter = Copter(275, 280, state)
+                    server.start()
 
 
     tile.topSpace=40
@@ -888,23 +833,9 @@ def doEntryLoop(screen,background):
     return tile
 
 # Process main game loop
-def doMainLoop(screen,background, tile):
-
-    global _heliSound
-    global _fuelSound
-    global _fuelDownSound
-    global _enemyKillSound
-    global _ufoKillImage
-    global _bgImage
-
-    _heliSound.play()
-
-    # Game state data
-    state=StateData()
-
-    # Create helicopter
-    copter=Copter(275, 280, state)
-
+def doMainLoop(screen, background, tile):
+    global copter
+    copter = Copter(275, 280, state)
     # Create sprite groups
     copterGroup = pygame.sprite.RenderPlain((copter))
     ufoGroup = pygame.sprite.RenderPlain()
@@ -917,16 +848,20 @@ def doMainLoop(screen,background, tile):
     clock=pygame.time.Clock()
     delta=1
     doContinue=True
-    topSpace=40
+    topSpace=30
     fuelReductionCnt=0
+
+    # server.start()
+
+
     while doContinue:
         clock.tick(100) # fps
         
         # Catch input event
         for event in pygame.event.get():
             if event.type == QUIT:
-                return
-            elif event.type == KEYDOWN:
+                close()
+            if event.type == KEYDOWN:
                 if event.key == 273: # up
                     copter.ymove=-copter.ydelta
                 if event.key == 274: # down
@@ -939,7 +874,7 @@ def doMainLoop(screen,background, tile):
                 #if event.key == 32: # space
                     #fireRocket(rocketGroup, copter, state)
                 if event.key == K_ESCAPE: # esc
-                    quit();
+                    quit()
             elif event.type == KEYUP:
                 copter.xmove=0
                 copter.ymove=0
@@ -976,8 +911,6 @@ def doMainLoop(screen,background, tile):
             fuelReductionCnt=0
             state.copterScore=state.copterScore+1
 
-        
-
         # Update sprites
         copterGroup.update()
         mineGroup.update()
@@ -1000,12 +933,11 @@ def doMainLoop(screen,background, tile):
         state.nextSector(tile)
 
     # Copter explodes
+    # server.stop()
     explodeGroup=explodeSprite(copter,10, 4)
     copterGroup.remove(copter)
 
-    global _copterKillSound
     cnt=0
-    _copterKillSound.play()
     while cnt<100:
 
         clock.tick(100) # fps
@@ -1045,10 +977,14 @@ def doMainLoop(screen,background, tile):
         # Catch input event
         for event in pygame.event.get():
             if event.type == QUIT:
+                server.stop()
                 sys.exit(0)
             elif event.type == KEYDOWN:
                 if event.key == 32:
                     doLoop=False
+                elif event.key == K_ESCAPE:
+                    server.stop()
+                    sys.exit(0)
 
 
 # Entrypoint
@@ -1059,15 +995,6 @@ def main():
     mainWindowWidth=_backgroundWidth
     mainWindowHeight=_backgroundHeight
 
-    # Initialize window
-    screen=initWindow(mainWindowWidth, mainWindowHeight)
-
-    # Load images for sprites
-    loadImages()
-
-    # Load sounds
-    loadSounds()
-
     # Create empty background
     background=createEmptySurface(screen, screen.get_size())
 
@@ -1077,6 +1004,7 @@ def main():
 
         # Enter main loop
         doMainLoop(screen, background, caveTile)
+
 
 #this calls the 'main' function when this script is executed
 if __name__ == '__main__': main()
