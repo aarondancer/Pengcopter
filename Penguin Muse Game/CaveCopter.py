@@ -202,6 +202,14 @@ def checkSealCollisions(sealGroup, killedGroup, state, background):
     # Handle killed UFOs
     handleKilledEnemies(killedGroup)
 
+def checkNemoCollisions(nemoGroup, state, background):
+    # Avoid fuel collisions with cave
+    nemos = nemoGroup.sprites()
+    for ndx in range(len(nemos)):
+        nemo = nemos[ndx]
+        if nemo.rect.left>=0:
+            checkBackgroundCollision(background,nemo,nemoGroup)
+
 # Checks penguin collisions with other objects
 def checkPenguinCollisions(penguin, orcaGroup, fuelGroup, sealGroup, \
                           poopGroup, state):
@@ -252,15 +260,18 @@ def addFuel(tile, fuelGroup, state, topSpace):
     global _backgroundHeight
 
     state.lastFuelCnt=state.lastFuelCnt+1
-    doAdd=random.randint(1,100)
+    doAdd=random.randint(1,50)
     if state.fuelCnt<state.fuelMax and state.lastFuelCnt>state.doFuelCnt:
         if doAdd==1:
             x=random.randint(1, 2)
             if x==1:
+                ymove=random.randint(1,state.maxYDelta)
                 position=tile.top_tileHeight+topSpace+random.randint(20, 40)
             else:
+                ymove=-random.randint(1,state.maxYDelta)
                 position=_backgroundHeight-tile.btm_tileHeight-random.randint(30, 50)
             fuel=FuelTank(_backgroundWidth-50, position, fuelGroup, state)
+            fuel.ymove = ymove
             fuelGroup.add(fuel)
             state.fuelCnt=state.fuelCnt+1
             state.lastFuelCnt=0
@@ -542,11 +553,12 @@ class FuelTank(pygame.sprite.Sprite):
         self.image, self.rect=_fuelImage
         self.rect.top=ypos
         self.rect.left=xpos
-        self.xmove=-1
-        self.ymove=0
+        self.xmove = -1
+        self.ymove = 0
         self.fuelGroup=fuelGroup
         self.gameState=gameState
         self.fuel=1
+        self.lastReverseCnt=0
 
     # Update fuel tank settings
     def update(self):
@@ -560,38 +572,30 @@ class FuelTank(pygame.sprite.Sprite):
             self.gameState.fuelCnt=self.gameState.fuelCnt-1
             self.fuelGroup.remove(self)
 
-
-
-# Poops are dropped by Orcas
-class Poop(pygame.sprite.Sprite):
-
-    # Init fuel tankeinstance
-    def __init__(self, xpos=800, ypos=300, poopGroup=None, gameState=None):
-
-        global _rocketImage
-        pygame.sprite.Sprite.__init__(self) #call Sprite initializer
-        self.image, self.rect=_poopImage
-        self.rect.top=ypos
-        self.rect.left=xpos
-        self.xmove=-1
-        self.ymove=0
-        self.gameState=gameState
-        self.poopGroup=poopGroup
-
-    # Update fuel tank settings
+    # Update UFO settings
     def update(self):
-        global _backgroundWidth
 
-        # Adjust rocket position
+        # Adjust UFO position
         newpos = self.rect.move((self.xmove, self.ymove))
         self.rect=newpos
 
-        # Remove poop leaving screen
-        if self.rect.left<=0:
-            self.gameState.poopCnt=self.gameState.poopCnt-1
-            self.poopGroup.remove(self)
+        # Remove UFO leaving screen
+        if self.rect.left==-30:
+            self.gameState.fuelCnt=self.gameState.sealCnt-1
+            self.fuelGroup.remove(self)
 
-# Enemy UFO
+        # Increase last reverse counter
+        self.lastReverseCnt=self.lastReverseCnt+1
+
+    # Seal has collided with background
+    def collidedBackground(self):
+        # Revert movement direction
+        if self.lastReverseCnt > 30:
+            self.ymove=-self.ymove
+            self.lastReverseCnt=0
+
+
+# Enemy Orca
 class Orca(pygame.sprite.Sprite):
 
     # Init UFO instance
@@ -632,6 +636,34 @@ class Orca(pygame.sprite.Sprite):
             self.ymove=-self.ymove
             self.lastReverseCnt=0
 
+# Poops are dropped by Orcas
+class Poop(pygame.sprite.Sprite):
+
+    # Init fuel tankeinstance
+    def __init__(self, xpos=800, ypos=300, poopGroup=None, gameState=None):
+
+        global _rocketImage
+        pygame.sprite.Sprite.__init__(self) #call Sprite initializer
+        self.image, self.rect=_poopImage
+        self.rect.top=ypos
+        self.rect.left=xpos
+        self.xmove=-1
+        self.ymove=0
+        self.gameState=gameState
+        self.poopGroup=poopGroup
+
+    # Update fuel tank settings
+    def update(self):
+        global _backgroundWidth
+
+        # Adjust rocket position
+        newpos = self.rect.move((self.xmove, self.ymove))
+        self.rect=newpos
+
+        # Remove poop leaving screen
+        if self.rect.left<=0:
+            self.gameState.poopCnt=self.gameState.poopCnt-1
+            self.poopGroup.remove(self)
 
 # Enemy Seal
 class Seal(pygame.sprite.Sprite):
@@ -743,7 +775,7 @@ class StateData():
     def __init__(self):
 
         # Orca create parameter
-        self.orcaMax=1
+        self.orcaMax=2
         self.orcaCnt=0
         self.lastOrcaCnt=-200
         self.doOrcaCnt=50
@@ -764,7 +796,7 @@ class StateData():
         self.doPoop=25
 
         # Fuel create parameter
-        self.fuelMax=1
+        self.fuelMax=4
         self.fuelCnt=0
         self.lastFuelCnt=-600
         self.doFuelCnt=500
@@ -888,7 +920,7 @@ def doMainLoop(screen,background, tile):
     orcaGroup = pygame.sprite.RenderPlain()
     sealGroup = pygame.sprite.RenderPlain()
     killedGroup = pygame.sprite.RenderPlain()
-    fuelGroup = pygame.sprite.RenderPlain()
+    nemoGroup = pygame.sprite.RenderPlain()
     poopGroup = pygame.sprite.RenderPlain()
 
     # Main Loop
@@ -927,13 +959,15 @@ def doMainLoop(screen,background, tile):
         addOrca(tile, orcaGroup, state, topSpace)
         addSeal(tile, orcaGroup, state, topSpace)
         addPoop(orcaGroup, poopGroup, state)
-        addFuel(tile, fuelGroup, state, topSpace)
+        addFuel(tile, nemoGroup, state, topSpace)
 
         # Check object collisions
         checkOrcaCollisions(orcaGroup, killedGroup, state, background)
-        checkSealCollisions(orcaGroup, killedGroup, state, background)
+        checkSealCollisions(sealGroup, killedGroup, state, background)
+        checkNemoCollisions(nemoGroup, state, background)
+
         doContinue=checkBackgroundCollision(background, penguin, penguinGroup)
-        checkPenguinCollisions(penguin, orcaGroup, fuelGroup, sealGroup, \
+        checkPenguinCollisions(penguin, orcaGroup, nemoGroup, sealGroup, \
                               poopGroup, state)
 
         # Update game state data
@@ -955,11 +989,11 @@ def doMainLoop(screen,background, tile):
         orcaGroup.update()
         sealGroup.update()
         killedGroup.update()
-        fuelGroup.update()
+        nemoGroup.update()
 
         # Update screen
         screen.blit(background, (0,0))
-        fuelGroup.draw(screen)
+        nemoGroup.draw(screen)
         penguinGroup.draw(screen)
         poopGroup.draw(screen)
         orcaGroup.draw(screen)
@@ -987,7 +1021,7 @@ def doMainLoop(screen,background, tile):
 
         # Update screen
         screen.blit(background, (0,0))
-        fuelGroup.draw(screen)
+        nemoGroup.draw(screen)
         explodeGroup.draw(screen)
         poopGroup.draw(screen)
         sealGroup.draw(screen)
