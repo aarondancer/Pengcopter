@@ -12,7 +12,7 @@ _penguinImage=None
 _orcaImage=None
 _sealImage=None
 _orcaKillImage=None
-_fuelImage=None
+_healthImage=None
 _poopImage=None
 _titleImage=None
 
@@ -21,8 +21,8 @@ _heliSound=None
 _missleSound=None
 _enemySound=None
 _enemyKillSound=None
-_fuelSound=None
-_fuelDownSound=None
+_healthSound=None
+_healthDownSound=None
 _poopSound=None
 _penguinKillSound=None
 
@@ -66,7 +66,7 @@ def loadImages():
     global _orcaImage
     global _orcaKillImage
     global _sealImage
-    global _fuelImage
+    global _healthImage
     global _poopImage
     global _titleImage
     global _bgImage
@@ -74,7 +74,7 @@ def loadImages():
     _penguinImage=loadImage('res/pennapps.png', (0,0,0))
     _orcaImage=loadImage('res/orca.png', (0,0,0))
     _sealImage=loadImage('res/seal.png', (0,0,0))
-    _fuelImage=loadImage('res/nemo.png', (0,0,0))
+    _healthImage=loadImage('res/nemo.png', (0,0,0))
     _poopImage=loadImage('res/emoji_poop.png', (0,0,0))
     _titleImage=loadImage('res/penguinlg.png',  (255,255,255))
     _bgImage = loadImage('res/bg.jpg', (0,0,0))
@@ -101,8 +101,8 @@ def loadSounds():
     global _missleSound
     global _enemySound
     global _enemyKillSound
-    global _fuelSound
-    global _fuelDownSound
+    global _healthSound
+    global _healthDownSound
     global _poopSound
     global _penguinKillSound
 
@@ -110,15 +110,15 @@ def loadSounds():
     _missleSound=loadSound('res\\missle.wav')
     _enemySound=loadSound('res\\enemy.wav')
     _enemyKillSound=loadSound('res\\enemyKill.wav')
-    _fuelSound=loadSound('res\\fuel.wav')
-    _fuelDownSound=loadSound('res\\fuelDown.wav')
+    _healthSound=loadSound('res\\health.wav')
+    _healthDownSound=loadSound('res\\fuelDown.wav')
     _poopSound=loadSound('res\\poop.wav')
     _penguinKillSound=loadSound('res\\penguinKill.wav')
 
     _enemyKillSound.set_volume(0.5)
     _heliSound.set_volume(0.5)
-    _fuelDownSound.set_volume(0.2)
-    _fuelSound.set_volume(0.05)
+    _healthDownSound.set_volume(0.2)
+    _healthSound.set_volume(0.05)
     _poopSound.set_volume(0.1)
     _penguinKillSound.set_volume(0.5)
 
@@ -203,7 +203,7 @@ def checkSealCollisions(sealGroup, killedGroup, state, background):
     handleKilledEnemies(killedGroup)
 
 def checkNemoCollisions(nemoGroup, state, background):
-    # Avoid fuel collisions with cave
+    # Avoid nemo collisions with cave
     nemos = nemoGroup.sprites()
     for ndx in range(len(nemos)):
         nemo = nemos[ndx]
@@ -211,33 +211,33 @@ def checkNemoCollisions(nemoGroup, state, background):
             checkBackgroundCollision(background,nemo,nemoGroup)
 
 # Checks penguin collisions with other objects
-def checkPenguinCollisions(penguin, orcaGroup, fuelGroup, sealGroup, \
+def checkPenguinCollisions(penguin, orcaGroup, healthGroup, sealGroup, \
                           poopGroup, state):
             # Check helipenguin collision with UFO
         collgroup=pygame.sprite.spritecollide(penguin, orcaGroup, sealGroup, pygame.sprite.collide_mask)
         if len(collgroup) > 0:
-            _fuelDownSound.play()
-            state.penguinFuel=state.penguinFuel-5
-            if state.fuelCnt<0:
-                state.fuelCnt=0
+            _healthDownSound.play()
+            state.penguinHealth=state.penguinHealth-5
+            if state.healthCnt<0:
+                state.healthCnt=0
 
-        # Check helipenguin collision with fuel tank
-        collgroup=pygame.sprite.spritecollide(penguin, fuelGroup, 0)
+        # Check helipenguin collision with nemo
+        collgroup=pygame.sprite.spritecollide(penguin, healthGroup, 0)
         if len(collgroup) > 0:
-            _fuelSound.play()
-            collgroup[0].fuel=collgroup[0].fuel-1
-            if collgroup[0].fuel<=0:
-                fuelGroup.remove(collgroup[0])
-                state.fuelCnt=0
-                state.lastFuelCnt=0
-            state.penguinFuel=state.penguinFuel+50
+            _healthSound.play()
+            collgroup[0].health=collgroup[0].health-1
+            if collgroup[0].health<=0:
+                healthGroup.remove(collgroup[0])
+                state.healthCnt=0
+                state.lastHealthCnt=0
+            state.penguinHealth=state.penguinHealth+50
 
         # Check helipenguin collision with poop
         collgroup=pygame.sprite.spritecollide(penguin, poopGroup, 1)
         if len(collgroup) > 0:
-            _fuelDownSound.play()
+            _healthDownSound.play()
             state.poopCnt=state.poopCnt-1
-            state.penguinFuel=state.penguinFuel-50
+            state.penguinHealth=state.penguinHealth-50
 
 # Handles disappearence of killed enemies from screen
 def handleKilledEnemies(killedGroup):
@@ -253,15 +253,15 @@ def handleKilledEnemies(killedGroup):
     for ndx in range(len(toBeRemoved)):
         killedGroup.remove(toBeRemoved[ndx])
 
-# Adds randomly fuel tanks
-def addFuel(tile, fuelGroup, state, topSpace):
+# Adds randomly Nemos
+def addHealth(tile, healthGroup, state, topSpace):
 
     global _backgroundWidth
     global _backgroundHeight
 
-    state.lastFuelCnt=state.lastFuelCnt+1
+    state.lastHealthCnt=state.lastHealthCnt+1
     doAdd=random.randint(1,50)
-    if state.fuelCnt<state.fuelMax and state.lastFuelCnt>state.doFuelCnt:
+    if state.healthCnt<state.healthMax and state.lastHealthCnt>state.doHealthCnt:
         if doAdd==1:
             x=random.randint(1, 2)
             if x==1:
@@ -270,11 +270,11 @@ def addFuel(tile, fuelGroup, state, topSpace):
             else:
                 ymove=-random.randint(1,state.maxYDelta)
                 position=_backgroundHeight-tile.btm_tileHeight-random.randint(30, 50)
-            fuel=FuelTank(_backgroundWidth-50, position, fuelGroup, state)
-            fuel.ymove = ymove
-            fuelGroup.add(fuel)
-            state.fuelCnt=state.fuelCnt+1
-            state.lastFuelCnt=0
+            health=Nemo(_backgroundWidth-50, position, healthGroup, state)
+            health.ymove = ymove
+            healthGroup.add(health)
+            state.healthCnt=state.healthCnt+1
+            state.lastHealthCnt=0
 
 # Adds randomly enemy poops
 def addPoop(orcaGroup, poopGroup, state):
@@ -363,7 +363,7 @@ def addText(text, background, xpos, ypos, \
 # Update game information on top of the screen
 def updatePenguinInfo(background, state):
     time2 = time.clock()
-    addText("Health: " + str(state.penguinFuel), background, 15, 3, THECOLORS['lightgrey'], (0,0,0), 20)
+    addText("Health: " + str(state.penguinHealth), background, 15, 3, THECOLORS['lightgrey'], (0,0,0), 20)
     addText("Sector: " + str(state.sector), background, 210, 3, THECOLORS[state.sectorColor], (0,0,0), 20)
     addText("Score: " + str(int ((10 * (round (time2 - time1, 1)))/2)), background, 440, 3, THECOLORS['cyan'], (0,0,0), 20)
 
@@ -542,35 +542,35 @@ class ExplodeTile(pygame.sprite.Sprite):
         self.rect.left=int(self.xpos)
         self.rect.top=int(self.ypos)
 
-# Fuel tank
-class FuelTank(pygame.sprite.Sprite):
+# Nemo/Health supply
+class Nemo(pygame.sprite.Sprite):
 
-    # Init fuel tankeinstance
-    def __init__(self, xpos=800, ypos=300, fuelGroup=None, gameState=None):
+    # Init nemo instance
+    def __init__(self, xpos=800, ypos=300, healthGroup=None, gameState=None):
 
-        global _fuelImage
+        global _healthImage
         pygame.sprite.Sprite.__init__(self) #call Sprite initializer
-        self.image, self.rect=_fuelImage
+        self.image, self.rect=_healthImage
         self.rect.top=ypos
         self.rect.left=xpos
         self.xmove = -1
         self.ymove = 0
-        self.fuelGroup=fuelGroup
+        self.healthGroup=healthGroup
         self.gameState=gameState
-        self.fuel=1
+        self.health=1
         self.lastReverseCnt=0
 
-    # Update fuel tank settings
+    # Update health tank settings
     def update(self):
 
-        # Adjust fuel tank position
+        # Adjust health tank position
         newpos = self.rect.move((self.xmove, self.ymove))
         self.rect=newpos
 
-        # Remove fuel tank leaving screen
+        # Remove health tank leaving screen
         if self.rect.left==-30:
-            self.gameState.fuelCnt=self.gameState.fuelCnt-1
-            self.fuelGroup.remove(self)
+            self.gameState.healthCnt=self.gameState.healthCnt-1
+            self.healthGroup.remove(self)
 
     # Update UFO settings
     def update(self):
@@ -581,8 +581,8 @@ class FuelTank(pygame.sprite.Sprite):
 
         # Remove UFO leaving screen
         if self.rect.left==-30:
-            self.gameState.fuelCnt=self.gameState.sealCnt-1
-            self.fuelGroup.remove(self)
+            self.gameState.healthCnt=self.gameState.sealCnt-1
+            self.healthGroup.remove(self)
 
         # Increase last reverse counter
         self.lastReverseCnt=self.lastReverseCnt+1
@@ -639,7 +639,7 @@ class Orca(pygame.sprite.Sprite):
 # Poops are dropped by Orcas
 class Poop(pygame.sprite.Sprite):
 
-    # Init fuel tankeinstance
+    # Init poop instance
     def __init__(self, xpos=800, ypos=300, poopGroup=None, gameState=None):
 
         global _rocketImage
@@ -652,7 +652,7 @@ class Poop(pygame.sprite.Sprite):
         self.gameState=gameState
         self.poopGroup=poopGroup
 
-    # Update fuel tank settings
+    # Update settings
     def update(self):
         global _backgroundWidth
 
@@ -748,9 +748,11 @@ class Penguin(pygame.sprite.Sprite):
     # Update helipenguin settings
     def update(self):
 
-        # Drop penguin if no fuel left
-        if self.state.penguinFuel<=0:
+        # Drop penguin if no health left
+        if self.state.penguinHealth<=0:
             self.ymove=2
+            # reset health to 0 if negative value
+            self.state.penguinHealth=0
         
 
         # Adjust helipenguin position
@@ -795,15 +797,15 @@ class StateData():
         self.lastPoopCnt=0
         self.doPoop=25
 
-        # Fuel create parameter
-        self.fuelMax=4
-        self.fuelCnt=0
-        self.lastFuelCnt=-600
-        self.doFuelCnt=500
+        # Health create parameter
+        self.healthMax=4
+        self.healthCnt=0
+        self.lastHealthCnt=-600
+        self.doHealthCnt=500
 
 
         # Penguin state
-        self.penguinFuel=1000
+        self.penguinHealth=1000
         self.penguinScore=0
 
 
@@ -899,8 +901,8 @@ def doEntryLoop(screen,background):
 def doMainLoop(screen,background, tile):
 
     global _heliSound
-    global _fuelSound
-    global _fuelDownSound
+    global _healthSound
+    global _healthDownSound
     global _enemyKillSound
     global _orcaKillImage
     global _bgImage
@@ -928,7 +930,7 @@ def doMainLoop(screen,background, tile):
     delta=1
     doContinue=True
     topSpace=40
-    fuelReductionCnt=0
+    healthReductionCnt=0
     while doContinue:
         clock.tick(100) # fps
         
@@ -959,7 +961,7 @@ def doMainLoop(screen,background, tile):
         addOrca(tile, orcaGroup, state, topSpace)
         addSeal(tile, orcaGroup, state, topSpace)
         addPoop(orcaGroup, poopGroup, state)
-        addFuel(tile, nemoGroup, state, topSpace)
+        addHealth(tile, nemoGroup, state, topSpace)
 
         # Check object collisions
         checkOrcaCollisions(orcaGroup, killedGroup, state, background)
@@ -971,14 +973,14 @@ def doMainLoop(screen,background, tile):
                               poopGroup, state)
 
         # Update game state data
-        if state.penguinFuel<0:
+        if state.penguinHealth<0:
             state.penguin=0
         updatePenguinInfo(background, state)
 
-        # Reduce penguin fuel
-        if fuelReductionCnt>10 and state.penguinFuel>0:
-            state.penguinFuel=state.penguinFuel-1
-            fuelReductionCnt=0
+        # Reduce penguin health
+        if healthReductionCnt>10 and state.penguinHealth>0:
+            state.penguinHealth=state.penguinHealth-1
+            healthReductionCnt=0
             state.penguinScore=state.penguinScore+1
 
         
