@@ -211,9 +211,10 @@ def checkNemoCollisions(nemoGroup, state, background):
             checkBackgroundCollision(background,nemo,nemoGroup)
 
 # Checks penguin collisions with other objects
-def checkPenguinCollisions(penguin, orcaGroup, healthGroup, sealGroup, \
-                          poopGroup, state):
-            # Check helipenguin collision with UFO
+def checkPenguinCollisions(penguin, penguinGroup, orcaGroup, healthGroup, sealGroup, poopGroup, background, state):
+        penguinGroup = pygame.sprite.RenderPlain((penguin))
+
+        # Check helipenguin collision with UFO
         collgroup=pygame.sprite.spritecollide(penguin, orcaGroup, sealGroup, pygame.sprite.collide_mask)
         if len(collgroup) > 0:
             _healthDownSound.play()
@@ -238,6 +239,18 @@ def checkPenguinCollisions(penguin, orcaGroup, healthGroup, sealGroup, \
             _healthDownSound.play()
             state.poopCnt=state.poopCnt-1
             state.penguinHealth=state.penguinHealth-50
+
+        # Avoid helipenguin collisions with cave
+        checkBackgroundCollision(background,penguin, penguinGroup)
+
+        # Avoid orca collisions with cave
+        seals=sealGroup.sprites()
+        for ndx in range(len(seals)):
+            seal=seals[ndx]
+            if seal.rect.left>=0:
+                checkBackgroundCollision(background,seal,sealGroup)
+
+
 
 # Handles disappearence of killed enemies from screen
 def handleKilledEnemies(killedGroup):
@@ -743,6 +756,7 @@ class Penguin(pygame.sprite.Sprite):
         self.xpos=xpos
         self.ypos=ypos
         self.state=state
+        self.lastReverseCnt=0
         self.area = pygame.display.get_surface().get_rect()
 
     # Update helipenguin settings
@@ -766,9 +780,9 @@ class Penguin(pygame.sprite.Sprite):
 
     # Helipenguin has collided with background
     def collidedBackground(self):
-
-        self.kill()
-        print ">>>> collided"
+        # Revert movement direction
+        self.ymove=-self.ymove
+        self.lastReverseCnt=0
 
 # Player's helipenguin
 class StateData():
@@ -967,10 +981,9 @@ def doMainLoop(screen,background, tile):
         checkOrcaCollisions(orcaGroup, killedGroup, state, background)
         checkSealCollisions(sealGroup, killedGroup, state, background)
         checkNemoCollisions(nemoGroup, state, background)
+        checkPenguinCollisions(penguin, penguinGroup, orcaGroup, nemoGroup, sealGroup, poopGroup, background, state)
 
-        doContinue=checkBackgroundCollision(background, penguin, penguinGroup)
-        checkPenguinCollisions(penguin, orcaGroup, nemoGroup, sealGroup, \
-                              poopGroup, state)
+        # doContinue=checkBackgroundCollision(background, penguin, penguinGroup)
 
         # Update game state data
         if state.penguinHealth<0:
