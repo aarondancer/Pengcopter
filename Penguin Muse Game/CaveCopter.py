@@ -245,17 +245,6 @@ class PengServer(ServerThread):
     def acc_callback(self, path, args):
         self.acc = args[0]
 
-    @make_method("/muse/elements/horseshoe", "ffff")
-    def good_callback(self, path, args):
-        global LE
-        global LF
-        global RF
-        global RE
-        LE = args[0]
-        LF = args[1]
-        RF = args[2]
-        RE = args[3]
-
 try:
     server = PengServer()
 except ServerError, err:
@@ -490,6 +479,9 @@ def updatePenguinInfo(background, state):
     addText("Health: " + str(state.penguinHealth), background, 15, 3, THECOLORS['lightgrey'], (0,0,0), 20)
     addText("Sector: " + str(state.sector), background, 210, 3, THECOLORS[state.sectorColor], (0,0,0), 20)
     addText("Score: " + str(int ((10 * (round (time2 - time1, 1)))/2)), background, 440, 3, THECOLORS['cyan'], (0,0,0), 20)
+    updateHorseshoeInfo(background)
+
+def updateHorseshoeInfo(background):
     addText("LE", background, 600, 3, THECOLORS['green'] if LE <= 2 else THECOLORS['red'], (0,0,0), 20)
     addText("LF", background, 640, 3, THECOLORS['green'] if LF <= 2 else THECOLORS['red'], (0,0,0), 20)
     addText("RF", background, 680, 3, THECOLORS['green'] if RF <= 2 else THECOLORS['red'], (0,0,0), 20)
@@ -886,7 +878,6 @@ def doEntryLoop(screen,background):
 
     global _backgroundWidth
     global _titleImage
-
     # Draw static background
     tile=CaveTile()
     tile.topSpace=0
@@ -897,10 +888,7 @@ def doEntryLoop(screen,background):
             THECOLORS['black'], THECOLORS['lightblue'], 20, True)
     addText("Pennjamin's Travels", background, 310, 405, \
             THECOLORS['white'], THECOLORS['lightblue'], 48, True)
-    addText("LE", background, 600, 3, THECOLORS['green'] if LE <= 2 else THECOLORS['red'], (0,0,0), 20)
-    addText("LF", background, 640, 3, THECOLORS['green'] if LF <= 2 else THECOLORS['red'], (0,0,0), 20)
-    addText("RF", background, 680, 3, THECOLORS['green'] if RF <= 2 else THECOLORS['red'], (0,0,0), 20)
-    addText("RE", background, 720, 3, THECOLORS['green'] if RE <= 2 else THECOLORS['red'], (0,0,0), 20)
+    updateHorseshoeInfo(background)
     picture = _titleImage[0]
     picture = pygame.transform.smoothscale(picture, (300,300))
     picture = pygame.transform.rotate(picture, 90)
@@ -914,7 +902,9 @@ def doEntryLoop(screen,background):
     clock=pygame.time.Clock()
     while doLoop:
         clock.tick(100) # fps
-
+        updateHorseshoeInfo(background)
+        screen.blit(background, (0,0))
+        pygame.display.flip()
         # Catch input event
         for event in pygame.event.get():
             if event.type == QUIT:
