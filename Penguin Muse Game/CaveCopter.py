@@ -124,8 +124,8 @@ class StateData():
 
 
         # Level parameter
-        self.sectorColors=['skyblue', 'skyblue', 'lightblue', 'lightblue',
-                          'skyblue', 'skyblue', 'lightblue', 'lightblue']
+        self.sectorColors=['skyblue', 'lightblue', 'cadetblue', 'darkcyan',
+                          'dogerblue4', 'skyblue', 'navyblue', 'gray10']
         self.sectorColorCnt=0
         self.sectorColor=self.sectorColors[self.sectorColorCnt]
         self.sector=1
@@ -172,7 +172,7 @@ state = StateData()
 class Penguin(pygame.sprite.Sprite):
 
     # Init helipenguin instance
-    def __init__(self, xpos=50, ypos=280, state=None):
+    def __init__(self, xpos=20, ypos=280, state=None):
 
         global _penguinImage
         pygame.sprite.Sprite.__init__(self) #call Sprite initializer
@@ -213,11 +213,21 @@ class Penguin(pygame.sprite.Sprite):
     # Helipenguin has collided with background
     def collidedBackground(self):
         # Revert movement direction
-        self.ymove=-self.ymove
+        if self.rect.bottom < 300:
+            # Adjust helipenguin position
+            newpos = self.rect.move((self.xmove, self.ymove))
+            newpos.top=newpos.top+(50)
+            self.rect = newpos
+        else:
+            newpos = self.rect.move((self.xmove, self.ymove))
+            newpos.bottom=newpos.bottom-(50)
+            self.rect = newpos
+        self.state.penguinHealth = self.state.penguinHealth / 2
+        self.ymove=0
         self.lastReverseCnt=0
 
 global penguin
-penguin = Penguin(275, 280, state)
+penguin = Penguin(50, 280, state)
 
 class PengServer(ServerThread):
 
@@ -237,6 +247,12 @@ class PengServer(ServerThread):
             mvar = 0.5
         if (mvar < -0.5):
             mvar = -0.5
+        # penguin.ymove += mvar
+
+        if (mvar < 0 and penguin.ymove > 0):
+            penguin.ymove += mvar * 2
+        if (mvar > 0 and penguin.ymove < 0):
+            penguin.ymove += mvar * 2
         penguin.ymove += mvar
 
     @make_method("/muse/acc", 'fff')
@@ -894,6 +910,8 @@ class SpriteExplosion():
                 self.poopMax=self.poopMax+1
             elif self.sector%3 == 0:
                 self.orcaMax=self.orcaMax+1
+            elif self.sector%2 == 0:
+                self.orcaMax=self.orcaMax+1
 
             if tile.minSpace>100:
                 tile.minSpace=tile.minSpace-25
@@ -945,7 +963,7 @@ def doEntryLoop(screen,background):
             if event.type == KEYDOWN:
                 if event.key == 32:
                     doLoop=False
-                    penguin = Penguin(275, 280, state)
+                    penguin = Penguin(50, 280, state)
                     server.start()
 
 
@@ -961,10 +979,9 @@ def doEntryLoop(screen,background):
 # Process main game loop
 def doMainLoop(screen, background, tile):
     global penguin
-    penguin = Penguin(275, 280, state)
 
     # Create helipenguin
-    penguin=Penguin(275, 280, state)
+    penguin=Penguin(50, 280, state)
     
     # Create sprite groups
     penguinGroup = pygame.sprite.RenderPlain((penguin))
@@ -1018,7 +1035,7 @@ def doMainLoop(screen, background, tile):
         checkNemoCollisions(nemoGroup, state, background)
         checkPenguinCollisions(penguin, penguinGroup, orcaGroup, nemoGroup, sealGroup, poopGroup, background, state)
 
-        doContinue=(state.penguinHealth!=0)
+        doContinue=(state.penguinHealth>0)
 
         # Update game state data
         if state.penguinHealth<0:
