@@ -764,9 +764,9 @@ class Penguin(pygame.sprite.Sprite):
 
         # Drop penguin if no health left
         if self.state.penguinHealth<=0:
-            self.ymove=2
             # reset health to 0 if negative value
             self.state.penguinHealth=0
+            self.kill()
         
 
         # Adjust helipenguin position
@@ -983,7 +983,7 @@ def doMainLoop(screen,background, tile):
         checkNemoCollisions(nemoGroup, state, background)
         checkPenguinCollisions(penguin, penguinGroup, orcaGroup, nemoGroup, sealGroup, poopGroup, background, state)
 
-        # doContinue=checkBackgroundCollision(background, penguin, penguinGroup)
+        doContinue=(state.penguinHealth!=0)
 
         # Update game state data
         if state.penguinHealth<0:
